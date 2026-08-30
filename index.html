@@ -1,15 +1,1034 @@
-<HTML>
-<HEAD>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-</HEAD>
-<BODY>
-<p align="left"><b><font color=red>О</font>ктябрь уже наступил,</b></p>
-<p align="right"><i>Уж роща отряхает</i></p>
-<p align="center"><i>Последние листы</i></p>
-<p align="left"><i>С нагих своих ветвей.</i></p>
-<p align="left"><i><font size=5 color=green>Дохнул осенний</font><font color=blue>хлад</font></i></p>
-<p align="left"><i><strike>Дорога промерзает,</strike></i></p>
-<p align="center"><i>Журча,<sup>еще </sup>бежит</i></p>
-<p align="right"><i><font size=5>За</font><sub><u>мельницу</u></sub><sup>бежит.</sup></i></p>
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Карта склада</title>
+
+<!--
+  ЗАПОЛНИТЕ ЭТИ ДАННЫЕ ДЛЯ АВТОНОМНОГО ХОСТИНГА (например GitHub Pages).
+  Возьмите их бесплатно на https://console.firebase.google.com:
+  1. Создайте проект -> Add app -> Web (</>) -> скопируйте объект firebaseConfig.
+  2. В разделе Build -> Realtime Database -> Create Database -> Start in test mode.
+  Пока apiKey оставлен как есть — сайт работает только внутри Claude (window.storage).
+  Как только впишете реальные значения — заработает синхронизация через Firebase
+  на любом хостинге, включая GitHub Pages.
+-->
+<script>
+  window.__FIREBASE_CONFIG__ = {
+  apiKey: "AIzaSyDsBOeoIPQ0-Z-jYEL1wVXiwdtywwWrhyg",
+  authDomain: "myfirstbiggestgigaproject.firebaseapp.com",
+  databaseURL: "https://myfirstbiggestgigaproject-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "myfirstbiggestgigaproject",
+  storageBucket: "myfirstbiggestgigaproject.firebasestorage.app",
+  messagingSenderId: "963080048208",
+  appId: "1:963080048208:web:c64b6ef3ec375b36aacb55",
+  measurementId: "G-VHCF2HDVSR"
+};
+</script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<style>
+  :root{
+    --panel:#F5F3EC;
+    --panel-2:#EDE9DC;
+    --ink:#1F2328;
+    --ink-soft:#6B7078;
+    --border:#D9D4C6;
+    --floor:#2C3036;
+    --floor-line:#3B4048;
+    --floor-line-major:#4A505A;
+    --yellow:#F2B705;
+    --blue:#3D6B99;
+    --blue-dark:#2D5478;
+    --red:#C1483D;
+    --green:#4C8C6B;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", "Courier New", monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;background:var(--panel);font-family:var(--sans);color:var(--ink);}
+  #app{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
+
+  /* ---------- Toolbar ---------- */
+  #toolbar{
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+    padding:10px 14px;background:var(--panel);border-bottom:2px solid var(--ink);
+    z-index:20;position:relative;
+  }
+  .brand{
+    font-family:var(--mono);font-weight:700;letter-spacing:0.14em;text-transform:uppercase;
+    font-size:13px;color:var(--ink);padding-right:10px;margin-right:4px;border-right:1px solid var(--border);
+    white-space:nowrap;
+  }
+  .brand small{display:block;font-weight:400;letter-spacing:0.04em;color:var(--ink-soft);font-size:10px;text-transform:none;margin-top:1px;}
+  button.tool{
+    font-family:var(--sans);font-size:13px;font-weight:600;letter-spacing:0.01em;
+    background:var(--panel-2);color:var(--ink);border:1px solid var(--border);border-radius:4px;
+    padding:8px 12px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:transform .08s, background .12s;
+  }
+  button.tool:hover{background:#E4DFCF;}
+  button.tool:active{transform:translateY(1px);}
+  button.tool:disabled{opacity:0.35;cursor:not-allowed;}
+  button.tool:disabled:hover{background:var(--panel-2);}
+  button.primary{background:var(--blue);color:#fff;border-color:var(--blue-dark);}
+  button.primary:hover{background:var(--blue-dark);}
+  button.danger{background:var(--panel-2);color:var(--red);border-color:var(--red);}
+  button.danger:hover{background:var(--red);color:#fff;}
+  .sep{width:1px;align-self:stretch;background:var(--border);margin:0 2px;}
+  .spacer{flex:1;}
+  .kbd{font-family:var(--mono);font-size:10px;color:var(--ink-soft);}
+
+  #add-group{position:relative;display:flex;}
+  #btn-add{border-top-right-radius:0;border-bottom-right-radius:0;}
+  #btn-add-caret{
+    border-top-left-radius:0;border-bottom-left-radius:0;
+    border-left:1px solid rgba(255,255,255,0.25);padding:8px 8px;
+  }
+  #add-menu{
+    position:absolute;top:calc(100% + 4px);left:0;min-width:170px;
+    background:var(--panel);border:1px solid var(--ink);border-radius:5px;
+    box-shadow:0 6px 16px rgba(0,0,0,0.3);z-index:30;display:none;overflow:hidden;
+  }
+  #add-menu.open{display:block;}
+  #add-menu button{
+    display:block;width:100%;text-align:left;background:none;border:none;
+    padding:9px 12px;font-family:var(--sans);font-size:13px;font-weight:600;
+    color:var(--ink);cursor:pointer;
+  }
+  #add-menu button:hover{background:var(--panel-2);}
+  #add-menu button + button{border-top:1px solid var(--border);}
+
+  /* ---------- Floor ---------- */
+  #floor-wrap{flex:1;position:relative;overflow:auto;background:var(--floor);}
+  #floor{
+    position:relative;width:1600px;height:1000px;background:var(--floor);
+    background-image:
+      linear-gradient(var(--floor-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--floor-line) 1px, transparent 1px),
+      linear-gradient(var(--floor-line-major) 1px, transparent 1px),
+      linear-gradient(90deg, var(--floor-line-major) 1px, transparent 1px);
+    background-size: 20px 20px, 20px 20px, 100px 100px, 100px 100px;
+    background-position: -1px -1px;
+  }
+  #floor.custom-bg{
+    background-color:#202327;
+    background-size:cover;background-position:center;background-repeat:no-repeat;
+  }
+  #floor.custom-bg .zone-label, #floor.custom-bg .dock, #floor.custom-bg .dock-label{display:none;}
+  #floor.custom-bg .col-labels span, #floor.custom-bg .row-labels span{
+    text-shadow:0 0 3px #000, 0 0 3px #000;
+  }
+  .col-labels, .row-labels{position:absolute;font-family:var(--mono);font-size:10px;color:#7A828C;user-select:none;pointer-events:none;}
+  .col-labels{top:4px;left:0;width:100%;height:16px;}
+  .col-labels span{position:absolute;top:0;}
+  .row-labels{left:4px;top:0;height:100%;width:16px;}
+  .row-labels span{position:absolute;left:0;}
+
+  .dock{
+    position:absolute;left:0;right:0;bottom:0;height:14px;
+    background:repeating-linear-gradient(45deg, var(--yellow) 0 10px, #1c1e21 10px 20px);
+    border-top:2px solid #1c1e21;
+  }
+  .dock-label{
+    position:absolute;left:8px;bottom:16px;font-family:var(--mono);font-size:10px;
+    letter-spacing:0.12em;color:var(--yellow);text-transform:uppercase;pointer-events:none;
+  }
+
+  .zone-label{
+    position:absolute;font-family:var(--mono);font-size:11px;letter-spacing:0.1em;
+    color:#525A64;text-transform:uppercase;pointer-events:none;user-select:none;
+  }
+
+  /* ---------- Boxes ---------- */
+  .box{
+    position:absolute;min-width:64px;max-width:160px;min-height:48px;padding:5px 9px;
+    background:var(--blue);border:1.5px solid #1c3a52;border-radius:5px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+    font-family:var(--mono);color:#fff;
+    cursor:grab;user-select:none;box-shadow:0 2px 5px rgba(0,0,0,0.35);
+    touch-action:none;transition:transform .15s ease;transform-origin:center center;
+  }
+  .box.dragging{cursor:grabbing;box-shadow:0 6px 16px rgba(0,0,0,0.5);z-index:50;}
+  .box.selected{outline:2px solid var(--yellow);outline-offset:2px;}
+  .box .num{pointer-events:none;font-weight:700;font-size:16px;line-height:1.1;white-space:nowrap;}
+  .box .num[contenteditable="true"]{pointer-events:auto;outline:none;cursor:text;min-width:1ch;}
+  .box .name{
+    pointer-events:none;font-weight:500;font-size:10.5px;line-height:1.15;color:#D9E7F2;
+    max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .box .name.placeholder{color:#8FADC4;font-style:italic;}
+  .box .name[contenteditable="true"]{
+    pointer-events:auto;outline:none;cursor:text;min-width:3ch;white-space:normal;
+    overflow:visible;text-overflow:clip;
+  }
+
+  .box-controls{
+    position:absolute;display:flex;gap:3px;padding:3px;background:var(--panel);
+    border:1px solid var(--ink);border-radius:5px;z-index:60;box-shadow:0 3px 8px rgba(0,0,0,0.3);
+  }
+  .box-controls button{
+    width:24px;height:24px;border:none;border-radius:3px;background:var(--panel-2);
+    font-family:var(--mono);font-weight:700;font-size:13px;cursor:pointer;color:var(--ink);
+  }
+  .box-controls button:hover{background:#E4DFCF;}
+  .box-controls button.del{color:var(--red);}
+  .box-controls button.del:hover{background:var(--red);color:#fff;}
+
+  /* ---------- Edit modal ---------- */
+  #edit-overlay{
+    position:fixed;inset:0;background:rgba(20,20,20,0.55);display:none;
+    align-items:center;justify-content:center;z-index:300;
+  }
+  #edit-overlay.open{display:flex;}
+  #edit-modal{
+    background:var(--panel);border:2px solid var(--ink);border-radius:8px;
+    width:280px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,0.4);
+  }
+  #edit-modal h3{margin:0 0 12px;font-family:var(--mono);font-size:13px;text-transform:uppercase;letter-spacing:0.1em;}
+  #edit-modal label{display:block;font-size:11px;color:var(--ink-soft);margin-bottom:4px;margin-top:10px;}
+  #edit-modal label:first-of-type{margin-top:0;}
+  #edit-modal input{
+    width:100%;font-family:var(--sans);font-size:14px;padding:8px 9px;
+    border:1px solid var(--border);border-radius:4px;background:#fff;color:var(--ink);
+  }
+  #edit-modal input#edit-num{font-family:var(--mono);}
+  #edit-actions{display:flex;gap:8px;margin-top:16px;}
+  #edit-actions button{flex:1;padding:8px 0;border-radius:4px;font-weight:600;font-size:13px;cursor:pointer;}
+  #edit-cancel{background:var(--panel-2);border:1px solid var(--border);color:var(--ink);}
+  #edit-cancel:hover{background:#E4DFCF;}
+  #edit-save{background:var(--blue);border:1px solid var(--blue-dark);color:#fff;}
+  #edit-save:hover{background:var(--blue-dark);}
+
+  /* ---------- Confirm modal ---------- */
+  #confirm-overlay{
+    position:fixed;inset:0;background:rgba(20,20,20,0.55);display:none;
+    align-items:center;justify-content:center;z-index:310;
+  }
+  #confirm-overlay.open{display:flex;}
+  #confirm-modal{
+    background:var(--panel);border:2px solid var(--ink);border-radius:8px;
+    width:300px;padding:18px;box-shadow:0 10px 30px rgba(0,0,0,0.4);
+  }
+  #confirm-message{margin:0;font-size:14px;line-height:1.4;color:var(--ink);}
+  #confirm-actions{display:flex;gap:8px;margin-top:16px;}
+  #confirm-actions button{flex:1;padding:8px 0;border-radius:4px;font-weight:600;font-size:13px;cursor:pointer;}
+  #confirm-cancel{background:var(--panel-2);border:1px solid var(--border);color:var(--ink);}
+  #confirm-cancel:hover{background:#E4DFCF;}
+  #confirm-ok{background:var(--red);border:1px solid #8f342b;color:#fff;}
+  #confirm-ok:hover{background:#a63c31;}
+
+  /* ---------- Templates drawer ---------- */
+  #drawer{
+    position:absolute;top:0;right:-300px;width:280px;height:100%;
+    background:var(--panel);border-left:2px solid var(--ink);
+    transition:right .18s ease;z-index:80;display:flex;flex-direction:column;
+  }
+  #drawer.open{right:0;}
+  #drawer-head{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+  #drawer-head h3{margin:0;font-size:13px;text-transform:uppercase;letter-spacing:0.1em;font-family:var(--mono);}
+  #drawer-close{background:none;border:none;font-size:18px;cursor:pointer;color:var(--ink-soft);line-height:1;}
+  #save-row{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;gap:6px;}
+  #save-name{flex:1;font-family:var(--sans);font-size:12px;padding:7px 8px;border:1px solid var(--border);border-radius:4px;background:#fff;color:var(--ink);}
+  #tpl-list{flex:1;overflow-y:auto;padding:8px;}
+  .tpl-item{
+    background:var(--panel-2);border:1px solid var(--border);border-radius:5px;
+    padding:9px 10px;margin-bottom:7px;
+  }
+  .tpl-item .tpl-name{font-weight:700;font-size:13px;margin-bottom:2px;word-break:break-word;}
+  .tpl-item .tpl-meta{font-family:var(--mono);font-size:10px;color:var(--ink-soft);margin-bottom:7px;}
+  .tpl-item .tpl-actions{display:flex;gap:6px;}
+  .tpl-item .tpl-actions button{
+    flex:1;font-size:11px;padding:5px 0;border-radius:3px;border:1px solid var(--border);
+    background:#fff;cursor:pointer;font-weight:600;
+  }
+  .tpl-item .tpl-actions button.load{color:var(--blue-dark);border-color:var(--blue-dark);}
+  .tpl-item .tpl-actions button.load:hover{background:var(--blue);color:#fff;}
+  .tpl-item .tpl-actions button.del{color:var(--red);border-color:var(--red);}
+  .tpl-item .tpl-actions button.del:hover{background:var(--red);color:#fff;}
+  #tpl-empty{padding:20px 14px;color:var(--ink-soft);font-size:12px;text-align:center;}
+
+  #toast{
+    position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--ink);color:#fff;padding:9px 16px;border-radius:5px;font-size:12px;
+    opacity:0;pointer-events:none;transition:opacity .2s, transform .2s;z-index:200;
+  }
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="toolbar">
+    <div class="brand">Карта склада<small>план раскладки</small></div>
+    <div id="add-group">
+      <button class="tool primary" id="btn-add">+ Добавить ящик</button>
+      <button class="tool primary" id="btn-add-caret" title="Добавить несколько">▾</button>
+      <div id="add-menu">
+        <button data-n="1">+1 ящик</button>
+        <button data-n="5">+5 ящиков</button>
+        <button data-n="10">+10 ящиков</button>
+      </div>
+    </div>
+    <div class="sep"></div>
+    <button class="tool" id="btn-undo" title="Отменить (Ctrl+Z)">↶ Отменить</button>
+    <button class="tool" id="btn-redo" title="Повторить (Ctrl+Y)">↷ Повторить</button>
+    <div class="sep"></div>
+    <button class="tool danger" id="btn-reset">⟲ Сброс</button>
+    <div class="sep"></div>
+    <button class="tool" id="btn-bg">🖼 Загрузить фон</button>
+    <button class="tool" id="btn-bg-clear" style="display:none;">✕ Убрать фон</button>
+    <input type="file" id="bg-file" accept="image/*" style="display:none;">
+    <div class="spacer"></div>
+    <button class="tool" id="btn-templates">▤ Шаблоны</button>
+  </div>
+
+  <div id="floor-wrap">
+    <div id="floor">
+      <div class="col-labels" id="col-labels"></div>
+      <div class="row-labels" id="row-labels"></div>
+      <div class="zone-label" style="top:24px;left:24px;">ЗОНА A — ПРИЁМКА</div>
+      <div class="zone-label" style="top:24px;left:620px;">ЗОНА B — ХРАНЕНИЕ</div>
+      <div class="zone-label" style="top:24px;left:1220px;">ЗОНА C — ОТГРУЗКА</div>
+      <div class="dock-label">Погрузочная зона</div>
+      <div class="dock"></div>
+      <!-- boxes injected here -->
+    </div>
+  </div>
+
+  <div id="drawer">
+    <div id="drawer-head">
+      <h3>Шаблоны</h3>
+      <button id="drawer-close">✕</button>
+    </div>
+    <div id="save-row">
+      <input id="save-name" type="text" placeholder="Название шаблона…" maxlength="60">
+      <button class="tool primary" id="btn-save-tpl" style="padding:7px 10px;">Сохранить</button>
+    </div>
+    <div id="tpl-list"></div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<div id="edit-overlay">
+  <div id="edit-modal">
+    <h3>Редактировать ящик</h3>
+    <label for="edit-num">Число</label>
+    <input type="number" id="edit-num">
+    <label for="edit-name">Название</label>
+    <input type="text" id="edit-name" maxlength="40" placeholder="без названия">
+    <div id="edit-actions">
+      <button id="edit-cancel">Отмена</button>
+      <button id="edit-save">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<div id="confirm-overlay">
+  <div id="confirm-modal">
+    <p id="confirm-message"></p>
+    <div id="confirm-actions">
+      <button id="confirm-cancel">Отмена</button>
+      <button id="confirm-ok">Да</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const floor = document.getElementById('floor');
+  const floorWrap = document.getElementById('floor-wrap');
+  const FLOOR_W = 1600, FLOOR_H = 1000;
+
+  // ---------- storage backend ----------
+  // Inside Claude, window.storage is provided by the artifact runtime.
+  // On a standalone host (GitHub Pages etc.) that doesn't exist, so we
+  // use Firebase Realtime Database instead if firebaseConfig has been
+  // filled in. Both paths expose the same small API used by the rest
+  // of the app, and the Firebase path also gets true real-time push
+  // updates instead of polling.
+  const fbConfig = window.__FIREBASE_CONFIG__ || {};
+  const USE_FIREBASE = !!(fbConfig.apiKey && fbConfig.apiKey !== 'ВАШ_API_KEY' && typeof firebase !== 'undefined');
+  let fbDb = null;
+  if(USE_FIREBASE){
+    firebase.initializeApp(fbConfig);
+    fbDb = firebase.database();
+  }
+
+  const backend = {
+    async getShared(){
+      if(USE_FIREBASE){
+        const snap = await fbDb.ref('shared-state').once('value');
+        return snap.exists() ? snap.val() : null;
+      }
+      const res = await window.storage.get('warehouse-map:shared-state', true);
+      return res && res.value ? JSON.parse(res.value) : null;
+    },
+    async setShared(payload){
+      if(USE_FIREBASE){
+        await fbDb.ref('shared-state').set(payload);
+      } else {
+        await window.storage.set('warehouse-map:shared-state', JSON.stringify(payload), true);
+      }
+    },
+    // Only used in the Firebase path: fires cb(payload) whenever another
+    // client updates the shared state. Returns nothing meaningful on the
+    // window.storage path — that path is polled instead (see pollSharedState).
+    subscribeShared(cb){
+      if(!USE_FIREBASE) return;
+      fbDb.ref('shared-state').on('value', (snap)=>{
+        if(snap.exists()) cb(snap.val());
+      });
+    },
+    async getTemplates(){
+      if(USE_FIREBASE){
+        const snap = await fbDb.ref('templates').once('value');
+        return snap.exists() ? snap.val() : [];
+      }
+      const res = await window.storage.get('warehouse-map:templates', true);
+      return res && res.value ? JSON.parse(res.value) : [];
+    },
+    async setTemplates(list){
+      if(USE_FIREBASE){
+        await fbDb.ref('templates').set(list);
+      } else {
+        await window.storage.set('warehouse-map:templates', JSON.stringify(list), true);
+      }
+    }
+  };
+
+  // ---------- grid coordinate labels ----------
+  const colLabels = document.getElementById('col-labels');
+  const rowLabels = document.getElementById('row-labels');
+  for(let x=100, i=1; x<FLOOR_W; x+=100, i++){
+    const s=document.createElement('span'); s.style.left=x+'px'; s.textContent=i; colLabels.appendChild(s);
+  }
+  for(let y=100, i=0; y<FLOOR_H; y+=100, i++){
+    const s=document.createElement('span'); s.style.top=y+'px'; s.textContent=String.fromCharCode(65+i); rowLabels.appendChild(s);
+  }
+
+  // ---------- state ----------
+  let boxes = [];        // {id, x, y, num}
+  let selectedId = null;
+  let idCounter = 1;
+  let numCounter = 1;
+  let history = [];
+  let historyIndex = -1;
+  let suppressSnapshot = false;
+  let currentBgDataUrl = null;
+  let lastKnownUpdatedAt = 0;
+
+  function cloneBoxes(){ return boxes.map(b => ({...b})); }
+
+  function pushHistory(){
+    if(suppressSnapshot) return;
+    history = history.slice(0, historyIndex+1);
+    history.push(cloneBoxes());
+    historyIndex = history.length-1;
+    updateHistoryButtons();
+    syncSharedState();
+  }
+
+  function updateHistoryButtons(){
+    document.getElementById('btn-undo').disabled = historyIndex <= 0;
+    document.getElementById('btn-redo').disabled = historyIndex >= history.length-1;
+  }
+
+  function undo(){
+    if(historyIndex <= 0) return;
+    historyIndex--;
+    suppressSnapshot = true;
+    boxes = history[historyIndex].map(b=>({...b}));
+    render();
+    suppressSnapshot = false;
+    updateHistoryButtons();
+    syncSharedState();
+  }
+  function redo(){
+    if(historyIndex >= history.length-1) return;
+    historyIndex++;
+    suppressSnapshot = true;
+    boxes = history[historyIndex].map(b=>({...b}));
+    render();
+    suppressSnapshot = false;
+    updateHistoryButtons();
+    syncSharedState();
+  }
+
+  // ---------- shared persistence (all users/devices see the same board) ----------
+  async function syncSharedState(attempt){
+    attempt = attempt || 1;
+    const payload = {
+      boxes: cloneBoxes(),
+      idCounter, numCounter,
+      background: currentBgDataUrl,
+      updatedAt: Date.now()
+    };
+    try{
+      await backend.setShared(payload);
+      lastKnownUpdatedAt = payload.updatedAt;
+    }catch(err){
+      console.error('sync failed (attempt '+attempt+')', err);
+      if(attempt < 3){
+        await new Promise(r=>setTimeout(r, attempt*800));
+        return syncSharedState(attempt+1);
+      }
+      showToast('Не удалось синхронизировать изменения — проверьте соединение');
+    }
+  }
+
+  function isBusy(){
+    return !!document.querySelector('.dragging')
+      || !!document.querySelector('[contenteditable="true"]')
+      || editOverlay.classList.contains('open')
+      || document.getElementById('add-menu').classList.contains('open')
+      || document.getElementById('drawer').classList.contains('open');
+  }
+
+  function applyRemoteState(remote, announce){
+    boxes = (remote.boxes||[]).map(b=>({...b}));
+    idCounter = remote.idCounter || idCounter;
+    numCounter = remote.numCounter || numCounter;
+    currentBgDataUrl = remote.background || null;
+    if(currentBgDataUrl){ applyBackground(currentBgDataUrl); }
+    else { floor.classList.remove('custom-bg'); floor.style.backgroundImage=''; bgClearBtn.style.display='none'; }
+    lastKnownUpdatedAt = remote.updatedAt || Date.now();
+    deselect();
+    render();
+    suppressSnapshot = true;
+    history = [cloneBoxes()];
+    historyIndex = 0;
+    suppressSnapshot = false;
+    updateHistoryButtons();
+    if(announce) showToast('Карта обновлена другим пользователем');
+  }
+
+  async function pollSharedState(){
+    if(USE_FIREBASE) return; // Firebase pushes updates via subscribeShared() instead
+    if(document.hidden || isBusy()) return;
+    try{
+      const remote = await backend.getShared();
+      if(remote && remote.updatedAt && remote.updatedAt > lastKnownUpdatedAt){
+        applyRemoteState(remote, true);
+      }
+    }catch(err){ /* nothing saved yet or transient error */ }
+  }
+
+  // ---------- rendering ----------
+  function render(){
+    floor.querySelectorAll('.box').forEach(el=>el.remove());
+    closeControls();
+    boxes.forEach(b=>{
+      const el = document.createElement('div');
+      el.className = 'box' + (b.id===selectedId ? ' selected' : '');
+      el.style.left = b.x+'px';
+      el.style.top = b.y+'px';
+      el.style.transform = 'rotate('+(b.rot||0)+'deg)';
+      el.dataset.id = b.id;
+      const num = document.createElement('div');
+      num.className='num';
+      num.textContent = b.num;
+      const name = document.createElement('div');
+      name.className = 'name' + (b.name ? '' : ' placeholder');
+      name.textContent = b.name ? b.name : 'название';
+      el.appendChild(num);
+      el.appendChild(name);
+      floor.appendChild(el);
+      attachBoxEvents(el, b, num, name);
+    });
+    if(selectedId!=null && boxes.find(b=>b.id===selectedId)){
+      showControls(selectedId);
+    }
+  }
+
+  function attachBoxEvents(el, b, numEl, nameEl){
+    let dragging=false, startX=0, startY=0, origX=0, origY=0, moved=false;
+
+    el.addEventListener('pointerdown', (e)=>{
+      if(e.target.isContentEditable) return;
+      dragging = true; moved=false;
+      el.setPointerCapture(e.pointerId);
+      el.classList.add('dragging');
+      startX=e.clientX; startY=e.clientY; origX=b.x; origY=b.y;
+      select(b.id);
+    });
+    el.addEventListener('pointermove', (e)=>{
+      if(!dragging) return;
+      const dx=e.clientX-startX, dy=e.clientY-startY;
+      if(Math.abs(dx)>2||Math.abs(dy)>2) moved=true;
+      let nx = origX+dx, ny = origY+dy;
+      nx = Math.max(0, Math.min(FLOOR_W-el.offsetWidth, nx));
+      ny = Math.max(0, Math.min(FLOOR_H-el.offsetHeight, ny));
+      b.x=nx; b.y=ny;
+      el.style.left=nx+'px'; el.style.top=ny+'px';
+      positionControls(b);
+    });
+    el.addEventListener('pointerup', (e)=>{
+      if(!dragging) return;
+      dragging=false;
+      el.classList.remove('dragging');
+      if(moved) pushHistory();
+    });
+    el.addEventListener('dblclick', (e)=>{
+      e.stopPropagation();
+      numEl.contentEditable='true';
+      numEl.focus();
+      document.execCommand('selectAll',false,null);
+    });
+    numEl.addEventListener('blur', ()=>{
+      if(numEl.contentEditable!=='true') return;
+      numEl.contentEditable='false';
+      let v = parseInt(numEl.textContent.replace(/[^\-0-9]/g,''), 10);
+      if(isNaN(v)) v = b.num;
+      b.num = v;
+      numEl.textContent = b.num;
+      pushHistory();
+    });
+    numEl.addEventListener('keydown', (e)=>{
+      if(e.key==='Enter'){ e.preventDefault(); numEl.blur(); }
+    });
+
+    nameEl.addEventListener('dblclick', (e)=>{
+      e.stopPropagation();
+      nameEl.classList.remove('placeholder');
+      nameEl.textContent = b.name || '';
+      nameEl.contentEditable='true';
+      nameEl.focus();
+      document.execCommand('selectAll',false,null);
+    });
+    nameEl.addEventListener('blur', ()=>{
+      if(nameEl.contentEditable!=='true') return;
+      nameEl.contentEditable='false';
+      const v = nameEl.textContent.trim().slice(0,40);
+      b.name = v;
+      nameEl.textContent = v ? v : 'название';
+      nameEl.classList.toggle('placeholder', !v);
+      pushHistory();
+    });
+    nameEl.addEventListener('keydown', (e)=>{
+      if(e.key==='Enter'){ e.preventDefault(); nameEl.blur(); }
+    });
+  }
+
+  function select(id){
+    selectedId = id;
+    document.querySelectorAll('.box').forEach(el=>{
+      el.classList.toggle('selected', parseInt(el.dataset.id)===id);
+    });
+    showControls(id);
+  }
+
+  function deselect(){
+    selectedId=null;
+    document.querySelectorAll('.box').forEach(el=>el.classList.remove('selected'));
+    closeControls();
+  }
+
+  // floating +/- ✕ controls above selected box
+  let controlsEl=null;
+  function showControls(id){
+    closeControls();
+    const b = boxes.find(x=>x.id===id);
+    if(!b) return;
+    controlsEl = document.createElement('div');
+    controlsEl.className='box-controls';
+    controlsEl.innerHTML = `
+      <button data-act="edit" title="Редактировать">✎</button>
+      <button data-act="rotate" title="Повернуть на 90°">⟳</button>
+      <button data-act="minus">−</button>
+      <button data-act="plus">+</button>
+      <button data-act="del" class="del">✕</button>
+    `;
+    floor.appendChild(controlsEl);
+    positionControls(b);
+    controlsEl.addEventListener('pointerdown', e=>e.stopPropagation());
+    controlsEl.addEventListener('click', (e)=>{
+      const act = e.target.dataset.act;
+      if(!act) return;
+      const box = boxes.find(x=>x.id===id);
+      if(!box) return;
+      if(act==='plus'){ box.num++; }
+      else if(act==='minus'){ box.num--; }
+      else if(act==='rotate'){ box.rot = ((box.rot||0)+90)%360; render(); select(id); pushHistory(); return; }
+      else if(act==='edit'){ openEditModal(box); return; }
+      else if(act==='del'){ boxes = boxes.filter(x=>x.id!==id); deselect(); render(); pushHistory(); return; }
+      render();
+      select(id);
+      pushHistory();
+    });
+  }
+  function positionControls(b){
+    if(!controlsEl) return;
+    controlsEl.style.left = b.x + 'px';
+    controlsEl.style.top = (b.y - 34) + 'px';
+  }
+  function closeControls(){
+    if(controlsEl){ controlsEl.remove(); controlsEl=null; }
+  }
+
+  // ---------- edit modal ----------
+  const editOverlay = document.getElementById('edit-overlay');
+  const editNumInput = document.getElementById('edit-num');
+  const editNameInput = document.getElementById('edit-name');
+  let editingId = null;
+
+  function openEditModal(box){
+    editingId = box.id;
+    editNumInput.value = box.num;
+    editNameInput.value = box.name || '';
+    editOverlay.classList.add('open');
+    editNumInput.focus();
+    editNumInput.select();
+  }
+  function closeEditModal(){
+    editOverlay.classList.remove('open');
+    editingId = null;
+  }
+  function saveEditModal(){
+    const box = boxes.find(x=>x.id===editingId);
+    if(!box){ closeEditModal(); return; }
+    let v = parseInt(editNumInput.value, 10);
+    if(isNaN(v)) v = box.num;
+    box.num = v;
+    box.name = editNameInput.value.trim().slice(0,40);
+    closeEditModal();
+    render();
+    select(box.id);
+    pushHistory();
+  }
+  document.getElementById('edit-save').addEventListener('click', saveEditModal);
+  document.getElementById('edit-cancel').addEventListener('click', closeEditModal);
+  editOverlay.addEventListener('pointerdown', (e)=>{ if(e.target===editOverlay) closeEditModal(); });
+  editOverlay.addEventListener('keydown', (e)=>{
+    if(e.key==='Enter'){ e.preventDefault(); saveEditModal(); }
+    else if(e.key==='Escape'){ e.preventDefault(); closeEditModal(); }
+  });
+
+  // ---------- confirm modal (replaces window.confirm, which is blocked
+  // inside the sandboxed artifact iframe and would otherwise silently
+  // no-op every "are you sure?" action) ----------
+  const confirmOverlay = document.getElementById('confirm-overlay');
+  const confirmMessage = document.getElementById('confirm-message');
+  const confirmOkBtn = document.getElementById('confirm-ok');
+  const confirmCancelBtn = document.getElementById('confirm-cancel');
+
+  function askConfirm(message){
+    return new Promise((resolve)=>{
+      confirmMessage.textContent = message;
+      confirmOverlay.classList.add('open');
+      confirmOkBtn.focus();
+      function cleanup(result){
+        confirmOverlay.classList.remove('open');
+        confirmOkBtn.removeEventListener('click', onOk);
+        confirmCancelBtn.removeEventListener('click', onCancel);
+        confirmOverlay.removeEventListener('pointerdown', onBackdrop);
+        confirmOverlay.removeEventListener('keydown', onKey);
+        resolve(result);
+      }
+      function onOk(){ cleanup(true); }
+      function onCancel(){ cleanup(false); }
+      function onBackdrop(e){ if(e.target===confirmOverlay) cleanup(false); }
+      function onKey(e){
+        if(e.key==='Enter'){ e.preventDefault(); cleanup(true); }
+        else if(e.key==='Escape'){ e.preventDefault(); cleanup(false); }
+      }
+      confirmOkBtn.addEventListener('click', onOk);
+      confirmCancelBtn.addEventListener('click', onCancel);
+      confirmOverlay.addEventListener('pointerdown', onBackdrop);
+      confirmOverlay.addEventListener('keydown', onKey);
+    });
+  }
+
+  floor.addEventListener('pointerdown', (e)=>{
+    if(e.target===floor) deselect();
+  });
+
+  // ---------- toolbar actions ----------
+  function addBoxes(count){
+    let lastId = null;
+    for(let i=0; i<count; i++){
+      const b = {
+        id: idCounter++,
+        x: 60 + ((i%5)*90) + (Math.random()*20|0),
+        y: 60 + (Math.floor(i/5)*70) + (Math.random()*20|0),
+        num: numCounter++,
+        name: '',
+        rot: 0
+      };
+      b.x = Math.min(b.x, FLOOR_W-80);
+      b.y = Math.min(b.y, FLOOR_H-80);
+      boxes.push(b);
+      lastId = b.id;
+    }
+    render();
+    if(lastId!=null) select(lastId);
+    pushHistory();
+  }
+
+  document.getElementById('btn-add').addEventListener('click', ()=> addBoxes(1));
+
+  const addMenu = document.getElementById('add-menu');
+  const addCaret = document.getElementById('btn-add-caret');
+  addCaret.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    addMenu.classList.toggle('open');
+  });
+  addMenu.addEventListener('click', (e)=>{
+    const n = parseInt(e.target.dataset.n, 10);
+    if(!n) return;
+    addMenu.classList.remove('open');
+    addBoxes(n);
+  });
+  document.addEventListener('click', (e)=>{
+    if(!addMenu.contains(e.target) && e.target!==addCaret) addMenu.classList.remove('open');
+  });
+
+  document.getElementById('btn-undo').addEventListener('click', undo);
+  document.getElementById('btn-redo').addEventListener('click', redo);
+
+  document.getElementById('btn-reset').addEventListener('click', async ()=>{
+    if(boxes.length===0) return;
+    const ok = await askConfirm('Удалить все ящики с карты? Это действие можно отменить кнопкой «Отменить».');
+    if(!ok) return;
+    boxes = [];
+    deselect();
+    render();
+    pushHistory();
+    showToast('Карта очищена');
+  });
+
+  document.addEventListener('keydown', (e)=>{
+    const active = document.activeElement;
+    const typing = active && (active.isContentEditable || active.tagName==='INPUT');
+    if(typing) return;
+    if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='z' && !e.shiftKey){ e.preventDefault(); undo(); }
+    else if((e.ctrlKey||e.metaKey) && (e.key.toLowerCase()==='y' || (e.key.toLowerCase()==='z'&&e.shiftKey))){ e.preventDefault(); redo(); }
+    else if((e.key==='Delete'||e.key==='Backspace') && selectedId!=null){
+      e.preventDefault();
+      boxes = boxes.filter(b=>b.id!==selectedId);
+      deselect(); render(); pushHistory();
+    }
+  });
+
+  // ---------- background photo ----------
+  const bgBtn = document.getElementById('btn-bg');
+  const bgClearBtn = document.getElementById('btn-bg-clear');
+  const bgFile = document.getElementById('bg-file');
+
+  bgBtn.addEventListener('click', ()=> bgFile.click());
+
+  bgFile.addEventListener('change', (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    if(!file.type.startsWith('image/')){ showToast('Выберите файл изображения'); return; }
+    const reader = new FileReader();
+    reader.onload = (ev)=>{
+      const img = new Image();
+      img.onload = async ()=>{
+        currentBgDataUrl = fitImageToStorage(img);
+        applyBackground(currentBgDataUrl);
+        await syncSharedState();
+        showToast('Фон загружен — виден всем пользователям карты');
+      };
+      img.onerror = ()=> showToast('Не удалось прочитать изображение');
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+    bgFile.value = '';
+  });
+
+  bgClearBtn.addEventListener('click', async ()=>{
+    const ok = await askConfirm('Убрать загруженный фон для всех пользователей и вернуться к схеме склада?');
+    if(!ok) return;
+    currentBgDataUrl = null;
+    floor.classList.remove('custom-bg');
+    floor.style.backgroundImage='';
+    bgClearBtn.style.display='none';
+    await syncSharedState();
+    showToast('Фон удалён');
+  });
+
+  function downscaleImage(img, maxDim, quality){
+    let w = img.width, h = img.height;
+    if(w > maxDim || h > maxDim){
+      const scale = maxDim / Math.max(w,h);
+      w = Math.round(w*scale); h = Math.round(h*scale);
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width=w; canvas.height=h;
+    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+    return canvas.toDataURL('image/jpeg', quality);
+  }
+
+  // Keeps re-compressing/shrinking until the image is safely under the
+  // per-key storage limit (5MB), so uploading a large photo can't trigger
+  // the "internal server error" you get from an oversized write.
+  const MAX_BG_BYTES = 2.5 * 1024 * 1024; // leave headroom for the box data + JSON overhead
+  function fitImageToStorage(img){
+    let maxDim = 1920, quality = 0.8;
+    let dataUrl = downscaleImage(img, maxDim, quality);
+    let guard = 0;
+    while(dataUrl.length > MAX_BG_BYTES && guard < 6){
+      if(quality > 0.5) quality -= 0.12;
+      else maxDim = Math.round(maxDim * 0.8);
+      dataUrl = downscaleImage(img, maxDim, quality);
+      guard++;
+    }
+    return dataUrl;
+  }
+
+  function applyBackground(dataUrl){
+    floor.classList.add('custom-bg');
+    floor.style.backgroundImage = `url("${dataUrl}")`;
+    bgClearBtn.style.display='flex';
+  }
+
+  // ---------- templates (persistent, shared across users/devices) ----------
+  const drawer = document.getElementById('drawer');
+  document.getElementById('btn-templates').addEventListener('click', ()=>{
+    drawer.classList.add('open');
+    loadTemplateList();
+  });
+  document.getElementById('drawer-close').addEventListener('click', ()=>{
+    drawer.classList.remove('open');
+  });
+
+  async function getTemplates(){
+    try{
+      const list = await backend.getTemplates();
+      return Array.isArray(list) ? list : [];
+    }catch(err){
+      return [];
+    }
+  }
+  async function setTemplates(list){
+    try{
+      await backend.setTemplates(list);
+      return true;
+    }catch(err){
+      console.error('storage error', err);
+      return false;
+    }
+  }
+
+  async function loadTemplateList(){
+    const list = await getTemplates();
+    const container = document.getElementById('tpl-list');
+    container.innerHTML='';
+    if(list.length===0){
+      container.innerHTML = '<div id="tpl-empty">Пока нет сохранённых шаблонов.<br>Расставьте ящики и сохраните текущий вид.</div>';
+      return;
+    }
+    list.slice().reverse().forEach(tpl=>{
+      const item = document.createElement('div');
+      item.className='tpl-item';
+      const date = new Date(tpl.savedAt);
+      const dateStr = date.toLocaleDateString('ru-RU') + ' ' + date.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
+      item.innerHTML = `
+        <div class="tpl-name">${escapeHtml(tpl.name)}</div>
+        <div class="tpl-meta">${tpl.boxes.length} ящ. · ${dateStr}</div>
+        <div class="tpl-actions">
+          <button class="load">Загрузить</button>
+          <button class="del">Удалить</button>
+        </div>
+      `;
+      item.querySelector('.load').addEventListener('click', ()=>applyTemplate(tpl));
+      item.querySelector('.del').addEventListener('click', ()=>deleteTemplate(tpl.name));
+      container.appendChild(item);
+    });
+  }
+
+  function escapeHtml(s){
+    const d=document.createElement('div'); d.textContent=s; return d.innerHTML;
+  }
+
+  function applyTemplate(tpl){
+    boxes = tpl.boxes.map(b=>({...b}));
+    idCounter = Math.max(0, ...boxes.map(b=>b.id)) + 1;
+    numCounter = Math.max(0, ...boxes.map(b=>b.num)) + 1;
+    deselect();
+    render();
+    pushHistory();
+    drawer.classList.remove('open');
+    showToast('Шаблон «'+tpl.name+'» загружен');
+  }
+
+  async function deleteTemplate(name){
+    const ok = await askConfirm('Удалить шаблон «'+name+'»?');
+    if(!ok) return;
+    const list = await getTemplates();
+    const next = list.filter(t=>t.name!==name);
+    await setTemplates(next);
+    loadTemplateList();
+    showToast('Шаблон удалён');
+  }
+
+  document.getElementById('btn-save-tpl').addEventListener('click', async ()=>{
+    const input = document.getElementById('save-name');
+    const name = input.value.trim();
+    if(!name){ input.focus(); return; }
+    if(boxes.length===0){ showToast('Нечего сохранять — карта пуста'); return; }
+    const list = await getTemplates();
+    const existingIdx = list.findIndex(t=>t.name===name);
+    const tpl = { name, savedAt: Date.now(), boxes: cloneBoxes() };
+    if(existingIdx>=0){
+      const ok = await askConfirm('Шаблон с таким именем уже есть. Перезаписать?');
+      if(!ok) return;
+      list[existingIdx]=tpl;
+    } else {
+      list.push(tpl);
+    }
+    const ok = await setTemplates(list);
+    if(ok){
+      input.value='';
+      loadTemplateList();
+      showToast('Шаблон «'+name+'» сохранён');
+    } else {
+      showToast('Не удалось сохранить шаблон');
+    }
+  });
+
+  // ---------- toast ----------
+  let toastTimer=null;
+  function showToast(msg){
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(()=>t.classList.remove('show'), 2200);
+  }
+
+  // ---------- init ----------
+  async function initApp(){
+    try{
+      const remote = await backend.getShared();
+      if(remote){
+        applyRemoteState(remote, false);
+      } else {
+        render();
+        pushHistory();
+      }
+    }catch(err){
+      render();
+      pushHistory();
+    }
+
+    if(USE_FIREBASE){
+      // True real-time push: fires whenever any client writes new state.
+      let firstFire = true;
+      backend.subscribeShared((remote)=>{
+        if(firstFire){ firstFire = false; return; } // we already applied initial state above
+        if(document.hidden || isBusy()) return;
+        if(remote.updatedAt && remote.updatedAt > lastKnownUpdatedAt){
+          applyRemoteState(remote, true);
+        }
+      });
+    } else {
+      setInterval(pollSharedState, 4000);
+      document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) pollSharedState(); });
+    }
+  }
+  initApp();
+})();
+</script>
 </body>
 </html>
