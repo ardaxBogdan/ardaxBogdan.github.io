@@ -75,9 +75,43 @@
   button.primary:hover{background:var(--blue-dark);}
   button.danger{background:var(--panel-2);color:var(--red);border-color:var(--red);}
   button.danger:hover{background:var(--red);color:#fff;}
+  #zoom-group{display:flex;border:1px solid var(--border);border-radius:4px;overflow:hidden;}
+  #zoom-group button{border:none;border-radius:0;background:var(--panel-2);}
+  #zoom-group button + button{border-left:1px solid var(--border);}
+  #zoom-group button:hover{background:#E4DFCF;}
+  #btn-zoom-reset{font-family:var(--mono);font-size:11px;min-width:52px;}
   .sep{width:1px;align-self:stretch;background:var(--border);margin:0 2px;}
   .spacer{flex:1;}
   .kbd{font-family:var(--mono);font-size:10px;color:var(--ink-soft);}
+
+  #toolbar2{
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+    padding:8px 14px;background:var(--panel-2);border-bottom:1px solid var(--border);
+    z-index:19;position:relative;
+  }
+  #search-group{
+    display:flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--border);
+    border-radius:4px;padding:6px 10px;flex:1;min-width:220px;max-width:420px;
+  }
+  #search-group input{border:none;outline:none;font-family:var(--sans);font-size:13px;flex:1;background:transparent;color:var(--ink);}
+  .search-icon{font-size:13px;}
+  #search-clear{padding:4px 8px !important;font-size:12px;}
+  #search-count{font-family:var(--mono);font-size:11px;color:var(--ink-soft);white-space:nowrap;min-width:80px;}
+  .range-size-label{font-size:12px;color:var(--ink-soft);display:flex;align-items:center;gap:5px;white-space:nowrap;}
+  .range-size-label input{width:56px;font-family:var(--mono);font-size:12px;padding:5px 6px;border:1px solid var(--border);border-radius:4px;background:#fff;color:var(--ink);}
+  #btn-range-toggle.active{background:var(--yellow);color:#1c1e21;border-color:#c99a00;}
+
+  #range-legend{
+    position:absolute;left:14px;bottom:22px;background:rgba(245,243,236,0.96);
+    border:1px solid var(--ink);border-radius:6px;padding:9px 11px;
+    font-family:var(--mono);font-size:11px;color:var(--ink);z-index:16;
+    display:none;max-height:180px;overflow-y:auto;min-width:110px;
+  }
+  #range-legend.open{display:block;}
+  #range-legend .legend-title{font-weight:700;text-transform:uppercase;letter-spacing:0.08em;font-size:10px;color:var(--ink-soft);margin-bottom:6px;}
+  .legend-row{display:flex;align-items:center;gap:7px;margin-bottom:5px;}
+  .legend-row:last-child{margin-bottom:0;}
+  .legend-dot{width:11px;height:11px;border-radius:3px;flex-shrink:0;}
 
   #add-group{position:relative;display:flex;}
   #btn-add{border-top-right-radius:0;border-bottom-right-radius:0;}
@@ -101,6 +135,7 @@
 
   /* ---------- Floor ---------- */
   #floor-wrap{flex:1;position:relative;overflow:auto;background:var(--floor);}
+  #floor-scale{position:relative;}
   #floor{
     position:relative;width:1600px;height:1000px;background:var(--floor);
     background-image:
@@ -110,10 +145,15 @@
       linear-gradient(90deg, var(--floor-line-major) 1px, transparent 1px);
     background-size: 20px 20px, 20px 20px, 100px 100px, 100px 100px;
     background-position: -1px -1px;
+    transform-origin: 0 0;
   }
   #floor.custom-bg{
     background-color:#202327;
-    background-size:cover;background-position:center;background-repeat:no-repeat;
+    /* Fixed 1:1 to the floor's own native 1600x1000 box (not "cover"),
+       so the uploaded photo sits at the exact same spot and size on
+       every device. Zooming is done separately via the zoom controls,
+       which scale the whole floor (background + boxes) together. */
+    background-size:contain;background-position:center;background-repeat:no-repeat;
   }
   #floor.custom-bg .zone-label, #floor.custom-bg .dock, #floor.custom-bg .dock-label{display:none;}
   #floor.custom-bg .col-labels span, #floor.custom-bg .row-labels span{
@@ -142,16 +182,21 @@
 
   /* ---------- Boxes ---------- */
   .box{
-    position:absolute;min-width:64px;max-width:160px;min-height:48px;padding:5px 9px;
+    position:absolute;min-width:64px;max-width:190px;min-height:48px;padding:5px 9px;
     background:var(--blue);border:1.5px solid #1c3a52;border-radius:5px;
     display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
     font-family:var(--mono);color:#fff;
     cursor:grab;user-select:none;box-shadow:0 2px 5px rgba(0,0,0,0.35);
-    touch-action:none;transition:transform .15s ease;transform-origin:center center;
+    touch-action:none;transition:transform .15s ease, background-color .15s ease;transform-origin:center center;
   }
   .box.dragging{cursor:grabbing;box-shadow:0 6px 16px rgba(0,0,0,0.5);z-index:50;}
   .box.selected{outline:2px solid var(--yellow);outline-offset:2px;}
-  .box .num{pointer-events:none;font-weight:700;font-size:16px;line-height:1.1;white-space:nowrap;}
+  .box.search-dim{opacity:.2;}
+  .box.search-match{outline:3px solid var(--yellow);outline-offset:2px;box-shadow:0 0 14px rgba(242,183,5,0.75);z-index:40;}
+  .box .num{
+    pointer-events:none;font-weight:700;font-size:15px;line-height:1.25;
+    white-space:normal;word-break:break-word;text-align:center;
+  }
   .box .num[contenteditable="true"]{pointer-events:auto;outline:none;cursor:text;min-width:1ch;}
   .box .name{
     pointer-events:none;font-weight:500;font-size:10.5px;line-height:1.15;color:#D9E7F2;
@@ -174,6 +219,12 @@
   .box-controls button:hover{background:#E4DFCF;}
   .box-controls button.del{color:var(--red);}
   .box-controls button.del:hover{background:var(--red);color:#fff;}
+  .group-controls{gap:5px;padding:4px 5px;}
+  .group-controls button{width:auto;padding:0 9px;font-size:12px;white-space:nowrap;}
+  .group-count{
+    font-family:var(--mono);font-size:11px;color:var(--ink-soft);padding:0 5px;
+    display:flex;align-items:center;white-space:nowrap;
+  }
 
   /* ---------- Edit modal ---------- */
   #edit-overlay{
@@ -193,6 +244,21 @@
     border:1px solid var(--border);border-radius:4px;background:#fff;color:var(--ink);
   }
   #edit-modal input#edit-num{font-family:var(--mono);}
+  #edit-nums-list{margin-bottom:6px;max-height:200px;overflow-y:auto;}
+  .num-row{display:flex;gap:6px;margin-bottom:6px;}
+  .num-row input{flex:1;font-family:var(--mono);}
+  .num-row button{
+    width:30px;height:30px;flex-shrink:0;border:1px solid var(--border);border-radius:4px;
+    background:var(--panel-2);cursor:pointer;color:var(--red);font-size:14px;
+  }
+  .num-row button:hover{background:var(--red);color:#fff;}
+  .num-row button:disabled{opacity:.35;cursor:not-allowed;}
+  .num-row button:disabled:hover{background:var(--panel-2);color:var(--red);}
+  #edit-add-num{
+    width:100%;padding:7px 0;border:1px dashed var(--border);border-radius:4px;
+    background:none;color:var(--ink-soft);cursor:pointer;font-size:12px;font-weight:600;
+  }
+  #edit-add-num:hover{background:var(--panel-2);color:var(--ink);}
   #edit-actions{display:flex;gap:8px;margin-top:16px;}
   #edit-actions button{flex:1;padding:8px 0;border-radius:4px;font-weight:600;font-size:13px;cursor:pointer;}
   #edit-cancel{background:var(--panel-2);border:1px solid var(--border);color:var(--ink);}
@@ -218,13 +284,17 @@
   #confirm-ok{background:var(--red);border:1px solid #8f342b;color:#fff;}
   #confirm-ok:hover{background:#a63c31;}
 
-  /* ---------- Templates drawer ---------- */
-  #drawer{
-    position:absolute;top:0;right:-300px;width:280px;height:100%;
-    background:var(--panel);border-left:2px solid var(--ink);
-    transition:right .18s ease;z-index:80;display:flex;flex-direction:column;
+  /* ---------- Templates popup ---------- */
+  #templates-overlay{
+    position:fixed;inset:0;background:rgba(20,20,20,0.55);display:none;
+    align-items:center;justify-content:center;z-index:300;
   }
-  #drawer.open{right:0;}
+  #templates-overlay.open{display:flex;}
+  #drawer{
+    background:var(--panel);border:2px solid var(--ink);border-radius:8px;
+    width:320px;max-height:82vh;display:flex;flex-direction:column;overflow:hidden;
+    box-shadow:0 10px 30px rgba(0,0,0,0.4);
+  }
   #drawer-head{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
   #drawer-head h3{margin:0;font-size:13px;text-transform:uppercase;letter-spacing:0.1em;font-family:var(--mono);}
   #drawer-close{background:none;border:none;font-size:18px;cursor:pointer;color:var(--ink-soft);line-height:1;}
@@ -278,33 +348,57 @@
     <button class="tool" id="btn-bg">🖼 Загрузить фон</button>
     <button class="tool" id="btn-bg-clear" style="display:none;">✕ Убрать фон</button>
     <input type="file" id="bg-file" accept="image/*" style="display:none;">
+    <div class="sep"></div>
+    <div id="zoom-group">
+      <button class="tool" id="btn-zoom-out" title="Уменьшить масштаб">−</button>
+      <button class="tool" id="btn-zoom-reset" title="Сбросить масштаб">100%</button>
+      <button class="tool" id="btn-zoom-in" title="Увеличить масштаб">+</button>
+    </div>
     <div class="spacer"></div>
     <button class="tool" id="btn-templates">▤ Шаблоны</button>
   </div>
 
+  <div id="toolbar2">
+    <div id="search-group">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="search-input" placeholder="Число, диапазон 100-199, или название…">
+      <button class="tool" id="search-clear" style="display:none;">✕</button>
+    </div>
+    <span id="search-count"></span>
+    <div class="sep"></div>
+    <button class="tool" id="btn-range-toggle">🎨 Подсветка по диапазону</button>
+    <label class="range-size-label">Шаг: <input type="number" id="range-size" value="100" min="1"></label>
+    <span class="kbd" style="margin-left:auto;">Shift/Ctrl+клик или рамка — выбрать несколько</span>
+  </div>
+
   <div id="floor-wrap">
-    <div id="floor">
-      <div class="col-labels" id="col-labels"></div>
-      <div class="row-labels" id="row-labels"></div>
-      <div class="zone-label" style="top:24px;left:24px;">ЗОНА A — ПРИЁМКА</div>
-      <div class="zone-label" style="top:24px;left:620px;">ЗОНА B — ХРАНЕНИЕ</div>
-      <div class="zone-label" style="top:24px;left:1220px;">ЗОНА C — ОТГРУЗКА</div>
-      <div class="dock-label">Погрузочная зона</div>
-      <div class="dock"></div>
-      <!-- boxes injected here -->
+    <div id="floor-scale">
+      <div id="floor">
+        <div class="col-labels" id="col-labels"></div>
+        <div class="row-labels" id="row-labels"></div>
+        <div class="zone-label" style="top:24px;left:24px;">ЗОНА A — ПРИЁМКА</div>
+        <div class="zone-label" style="top:24px;left:620px;">ЗОНА B — ХРАНЕНИЕ</div>
+        <div class="zone-label" style="top:24px;left:1220px;">ЗОНА C — ОТГРУЗКА</div>
+        <div class="dock-label">Погрузочная зона</div>
+        <div class="dock"></div>
+        <div id="range-legend"><div class="legend-title">Диапазоны</div></div>
+        <!-- boxes injected here -->
+      </div>
     </div>
   </div>
 
-  <div id="drawer">
-    <div id="drawer-head">
-      <h3>Шаблоны</h3>
-      <button id="drawer-close">✕</button>
+  <div id="templates-overlay">
+    <div id="drawer">
+      <div id="drawer-head">
+        <h3>Шаблоны</h3>
+        <button id="drawer-close">✕</button>
+      </div>
+      <div id="save-row">
+        <input id="save-name" type="text" placeholder="Название шаблона…" maxlength="60">
+        <button class="tool primary" id="btn-save-tpl" style="padding:7px 10px;">Сохранить</button>
+      </div>
+      <div id="tpl-list"></div>
     </div>
-    <div id="save-row">
-      <input id="save-name" type="text" placeholder="Название шаблона…" maxlength="60">
-      <button class="tool primary" id="btn-save-tpl" style="padding:7px 10px;">Сохранить</button>
-    </div>
-    <div id="tpl-list"></div>
   </div>
 </div>
 <div id="toast"></div>
@@ -312,8 +406,9 @@
 <div id="edit-overlay">
   <div id="edit-modal">
     <h3>Редактировать ящик</h3>
-    <label for="edit-num">Число</label>
-    <input type="number" id="edit-num">
+    <label>Числа</label>
+    <div id="edit-nums-list"></div>
+    <button type="button" id="edit-add-num">+ добавить число</button>
     <label for="edit-name">Название</label>
     <input type="text" id="edit-name" maxlength="40" placeholder="без названия">
     <div id="edit-actions">
@@ -337,7 +432,37 @@
 (function(){
   const floor = document.getElementById('floor');
   const floorWrap = document.getElementById('floor-wrap');
+  const floorScale = document.getElementById('floor-scale');
   const FLOOR_W = 1600, FLOOR_H = 1000;
+
+  // ---------- zoom ----------
+  // The floor (background + grid + all boxes) is one fixed 1600x1000px
+  // element. Zooming scales that whole element uniformly via CSS
+  // transform, so the background stays pixel-locked to the same
+  // position/size relative to the boxes on every device — only the
+  // on-screen scale changes. #floor-scale is resized to match so the
+  // scrollbars in #floor-wrap reflect the zoomed size correctly.
+  let zoomLevel = 1;
+  const ZOOM_MIN = 0.3, ZOOM_MAX = 2.5, ZOOM_STEP = 0.15;
+  function applyZoom(){
+    floor.style.transform = 'scale('+zoomLevel+')';
+    floorScale.style.width = Math.round(FLOOR_W*zoomLevel)+'px';
+    floorScale.style.height = Math.round(FLOOR_H*zoomLevel)+'px';
+    document.getElementById('btn-zoom-reset').textContent = Math.round(zoomLevel*100)+'%';
+  }
+  function setZoom(v){
+    zoomLevel = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, +v.toFixed(2)));
+    applyZoom();
+  }
+  document.getElementById('btn-zoom-in').addEventListener('click', ()=> setZoom(zoomLevel+ZOOM_STEP));
+  document.getElementById('btn-zoom-out').addEventListener('click', ()=> setZoom(zoomLevel-ZOOM_STEP));
+  document.getElementById('btn-zoom-reset').addEventListener('click', ()=> setZoom(1));
+  floorWrap.addEventListener('wheel', (e)=>{
+    if(!e.ctrlKey) return; // plain scroll still pans the floor normally
+    e.preventDefault();
+    setZoom(zoomLevel + (e.deltaY<0 ? ZOOM_STEP : -ZOOM_STEP));
+  }, {passive:false});
+  applyZoom();
 
   // ---------- storage backend ----------
   // Inside Claude, window.storage is provided by the artifact runtime.
@@ -408,7 +533,7 @@
 
   // ---------- state ----------
   let boxes = [];        // {id, x, y, num}
-  let selectedId = null;
+  let selectedIds = new Set();
   let idCounter = 1;
   let numCounter = 1;
   let history = [];
@@ -417,7 +542,19 @@
   let currentBgDataUrl = null;
   let lastKnownUpdatedAt = 0;
 
-  function cloneBoxes(){ return boxes.map(b => ({...b})); }
+  function cloneBoxes(){ return boxes.map(b => ({...b, nums:(b.nums||[]).slice()})); }
+
+  function normalizeBox(b){
+    if(!Array.isArray(b.nums) || b.nums.length===0){
+      b.nums = (typeof b.num === 'number' && !isNaN(b.num)) ? [b.num] : [0];
+    }
+    b.nums = b.nums.map(n=>{ const v=parseInt(n,10); return isNaN(v)?0:v; });
+    delete b.num;
+    b.rot = b.rot||0;
+    b.name = b.name||'';
+    return b;
+  }
+  function normalizeBoxes(list){ return (list||[]).map(b=>normalizeBox({...b})); }
 
   function pushHistory(){
     if(suppressSnapshot) return;
@@ -485,9 +622,9 @@
   }
 
   function applyRemoteState(remote, announce){
-    boxes = (remote.boxes||[]).map(b=>({...b}));
+    boxes = normalizeBoxes(remote.boxes||[]);
     idCounter = remote.idCounter || idCounter;
-    numCounter = remote.numCounter || numCounter;
+    numCounter = Math.max(remote.numCounter||0, ...boxes.flatMap(b=>b.nums), 0) + 1;
     currentBgDataUrl = remote.background || null;
     if(currentBgDataUrl){ applyBackground(currentBgDataUrl); }
     else { floor.classList.remove('custom-bg'); floor.style.backgroundImage=''; bgClearBtn.style.display='none'; }
@@ -514,19 +651,116 @@
   }
 
   // ---------- rendering ----------
+  // ---------- search & range highlighting ----------
+  let rangeMode = false;
+  let rangeBucketSize = 100;
+  const RANGE_PALETTE = ['#3D6B99','#4C8C6B','#B25FA0','#C1483D','#C79B27','#3D8FA6','#7A5FB2','#8C6B4C'];
+
+  function bucketIndex(n){ return Math.floor(n / rangeBucketSize); }
+  function bucketColorFor(n){
+    const idx = bucketIndex(n);
+    const i = ((idx % RANGE_PALETTE.length) + RANGE_PALETTE.length) % RANGE_PALETTE.length;
+    return RANGE_PALETTE[i];
+  }
+  function bucketRangeLabel(idx){
+    const lo = idx * rangeBucketSize, hi = lo + rangeBucketSize - 1;
+    return lo + '–' + hi;
+  }
+
+  const searchInput = document.getElementById('search-input');
+  const searchClearBtn = document.getElementById('search-clear');
+  const searchCountEl = document.getElementById('search-count');
+
+  function parseSearchMatcher(q){
+    q = q.trim();
+    if(!q) return null;
+    const rangeParse = q.match(/^(-?\d+)\s*[-–—]\s*(-?\d+)$/);
+    if(rangeParse){
+      let lo = parseInt(rangeParse[1],10), hi = parseInt(rangeParse[2],10);
+      if(lo>hi){ const t=lo; lo=hi; hi=t; }
+      return (b)=> b.nums.some(n=> n>=lo && n<=hi);
+    }
+    if(/^-?\d+$/.test(q)){
+      const target = parseInt(q,10);
+      return (b)=> b.nums.includes(target);
+    }
+    const qq = q.toLowerCase();
+    return (b)=> (b.name||'').toLowerCase().includes(qq) || b.nums.some(n=>String(n).includes(qq));
+  }
+
+  function applySearchHighlight(){
+    const q = searchInput.value;
+    searchClearBtn.style.display = q.trim() ? 'flex' : 'none';
+    const matcher = parseSearchMatcher(q);
+    let matchCount = 0;
+    boxes.forEach(b=>{
+      const el = floor.querySelector('.box[data-id="'+b.id+'"]');
+      if(!el) return;
+      el.classList.remove('search-match','search-dim');
+      if(!matcher) return;
+      if(matcher(b)){ el.classList.add('search-match'); matchCount++; }
+      else{ el.classList.add('search-dim'); }
+    });
+    searchCountEl.textContent = matcher ? (matchCount+' найдено') : '';
+  }
+  searchInput.addEventListener('input', applySearchHighlight);
+  searchClearBtn.addEventListener('click', ()=>{
+    searchInput.value=''; applySearchHighlight(); searchInput.focus();
+  });
+
+  const rangeToggleBtn = document.getElementById('btn-range-toggle');
+  const rangeSizeInput = document.getElementById('range-size');
+  const rangeLegend = document.getElementById('range-legend');
+
+  rangeToggleBtn.addEventListener('click', ()=>{
+    rangeMode = !rangeMode;
+    rangeToggleBtn.classList.toggle('active', rangeMode);
+    render();
+  });
+  rangeSizeInput.addEventListener('change', ()=>{
+    let v = parseInt(rangeSizeInput.value,10);
+    if(isNaN(v) || v<1) v=1;
+    rangeBucketSize = v;
+    rangeSizeInput.value = v;
+    if(rangeMode) render();
+  });
+
+  function updateRangeLegend(){
+    if(!rangeMode || boxes.length===0){
+      rangeLegend.classList.remove('open');
+      return;
+    }
+    const used = new Set();
+    boxes.forEach(b=> used.add(bucketIndex(Math.min(...b.nums))));
+    const idxs = [...used].sort((a,b)=>a-b);
+    rangeLegend.innerHTML = '<div class="legend-title">Диапазоны</div>' + idxs.map(idx=>{
+      const i = ((idx % RANGE_PALETTE.length) + RANGE_PALETTE.length) % RANGE_PALETTE.length;
+      return '<div class="legend-row"><span class="legend-dot" style="background:'+RANGE_PALETTE[i]+'"></span>'+bucketRangeLabel(idx)+'</div>';
+    }).join('');
+    rangeLegend.classList.add('open');
+  }
+
   function render(){
     floor.querySelectorAll('.box').forEach(el=>el.remove());
     closeControls();
+    closeGroupControls();
     boxes.forEach(b=>{
+      normalizeBox(b);
       const el = document.createElement('div');
-      el.className = 'box' + (b.id===selectedId ? ' selected' : '');
+      el.className = 'box' + (selectedIds.has(b.id) ? ' selected' : '');
       el.style.left = b.x+'px';
       el.style.top = b.y+'px';
       el.style.transform = 'rotate('+(b.rot||0)+'deg)';
+      if(rangeMode){
+        el.style.background = bucketColorFor(Math.min(...b.nums));
+      } else {
+        el.style.background = '';
+      }
+      el.title = b.nums.join(', ') + (b.name ? ' — '+b.name : '');
       el.dataset.id = b.id;
       const num = document.createElement('div');
       num.className='num';
-      num.textContent = b.num;
+      num.textContent = b.nums.join(', ');
       const name = document.createElement('div');
       name.className = 'name' + (b.name ? '' : ' placeholder');
       name.textContent = b.name ? b.name : 'название';
@@ -535,56 +769,75 @@
       floor.appendChild(el);
       attachBoxEvents(el, b, num, name);
     });
-    if(selectedId!=null && boxes.find(b=>b.id===selectedId)){
-      showControls(selectedId);
+    selectedIds = new Set([...selectedIds].filter(id=>boxes.some(b=>b.id===id)));
+    if(selectedIds.size===1){
+      showControls([...selectedIds][0]);
+    } else if(selectedIds.size>1){
+      showGroupControls();
     }
+    applySearchHighlight();
+    updateRangeLegend();
   }
 
   function attachBoxEvents(el, b, numEl, nameEl){
-    let dragging=false, startX=0, startY=0, origX=0, origY=0, moved=false;
+    let dragging=false, startX=0, startY=0, moved=false, groupDrag=null;
 
     el.addEventListener('pointerdown', (e)=>{
       if(e.target.isContentEditable) return;
+      const modifier = e.shiftKey || e.ctrlKey || e.metaKey;
+      if(modifier){
+        toggleSelect(b.id);
+        return; // toggling selection only, no drag on this click
+      }
+      if(!selectedIds.has(b.id)){
+        selectOnly(b.id);
+      }
       dragging = true; moved=false;
       el.setPointerCapture(e.pointerId);
       el.classList.add('dragging');
-      startX=e.clientX; startY=e.clientY; origX=b.x; origY=b.y;
-      select(b.id);
+      startX=e.clientX; startY=e.clientY;
+      if(selectedIds.size>1){
+        groupDrag = [...selectedIds].map(id=>{
+          const bx = boxes.find(x=>x.id===id);
+          const bel = floor.querySelector('.box[data-id="'+id+'"]');
+          return (bx && bel) ? {box:bx, el:bel, origX:bx.x, origY:bx.y} : null;
+        }).filter(Boolean);
+      } else {
+        groupDrag = [{box:b, el:el, origX:b.x, origY:b.y}];
+      }
     });
     el.addEventListener('pointermove', (e)=>{
-      if(!dragging) return;
-      const dx=e.clientX-startX, dy=e.clientY-startY;
+      if(!dragging || !groupDrag) return;
+      let dx=(e.clientX-startX)/zoomLevel, dy=(e.clientY-startY)/zoomLevel;
+      let minDx=-Infinity, maxDx=Infinity, minDy=-Infinity, maxDy=Infinity;
+      groupDrag.forEach(g=>{
+        const w=g.el.offsetWidth, h=g.el.offsetHeight;
+        minDx = Math.max(minDx, -g.origX);
+        maxDx = Math.min(maxDx, FLOOR_W-w-g.origX);
+        minDy = Math.max(minDy, -g.origY);
+        maxDy = Math.min(maxDy, FLOOR_H-h-g.origY);
+      });
+      dx = Math.max(minDx, Math.min(maxDx, dx));
+      dy = Math.max(minDy, Math.min(maxDy, dy));
       if(Math.abs(dx)>2||Math.abs(dy)>2) moved=true;
-      let nx = origX+dx, ny = origY+dy;
-      nx = Math.max(0, Math.min(FLOOR_W-el.offsetWidth, nx));
-      ny = Math.max(0, Math.min(FLOOR_H-el.offsetHeight, ny));
-      b.x=nx; b.y=ny;
-      el.style.left=nx+'px'; el.style.top=ny+'px';
-      positionControls(b);
+      groupDrag.forEach(g=>{
+        const nx=g.origX+dx, ny=g.origY+dy;
+        g.box.x=nx; g.box.y=ny;
+        g.el.style.left=nx+'px'; g.el.style.top=ny+'px';
+      });
+      repositionActivePanels();
     });
     el.addEventListener('pointerup', (e)=>{
       if(!dragging) return;
       dragging=false;
       el.classList.remove('dragging');
       if(moved) pushHistory();
+      groupDrag = null;
     });
     el.addEventListener('dblclick', (e)=>{
       e.stopPropagation();
-      numEl.contentEditable='true';
-      numEl.focus();
-      document.execCommand('selectAll',false,null);
-    });
-    numEl.addEventListener('blur', ()=>{
-      if(numEl.contentEditable!=='true') return;
-      numEl.contentEditable='false';
-      let v = parseInt(numEl.textContent.replace(/[^\-0-9]/g,''), 10);
-      if(isNaN(v)) v = b.num;
-      b.num = v;
-      numEl.textContent = b.num;
-      pushHistory();
-    });
-    numEl.addEventListener('keydown', (e)=>{
-      if(e.key==='Enter'){ e.preventDefault(); numEl.blur(); }
+      if(e.target===nameEl) return; // name has its own inline editor below
+      openEditModal(b);
     });
 
     nameEl.addEventListener('dblclick', (e)=>{
@@ -609,21 +862,47 @@
     });
   }
 
-  function select(id){
-    selectedId = id;
+  function selectOnly(id){
+    selectedIds = new Set([id]);
+    refreshSelectionUI();
+  }
+  function select(id){ selectOnly(id); } // alias kept for existing call sites
+  function toggleSelect(id){
+    if(selectedIds.has(id)) selectedIds.delete(id); else selectedIds.add(id);
+    refreshSelectionUI();
+  }
+  function clearSelection(){
+    selectedIds.clear();
+    refreshSelectionUI();
+  }
+  function deselect(){ clearSelection(); } // alias kept for existing call sites
+
+  function refreshSelectionUI(){
     document.querySelectorAll('.box').forEach(el=>{
-      el.classList.toggle('selected', parseInt(el.dataset.id)===id);
+      el.classList.toggle('selected', selectedIds.has(parseInt(el.dataset.id)));
     });
-    showControls(id);
-  }
-
-  function deselect(){
-    selectedId=null;
-    document.querySelectorAll('.box').forEach(el=>el.classList.remove('selected'));
     closeControls();
+    closeGroupControls();
+    if(selectedIds.size===1){
+      showControls([...selectedIds][0]);
+    } else if(selectedIds.size>1){
+      showGroupControls();
+    }
   }
 
-  // floating +/- ✕ controls above selected box
+  function repositionActivePanels(){
+    if(selectedIds.size===1){
+      const b = boxes.find(x=>x.id===[...selectedIds][0]);
+      if(b) positionControls(b);
+    } else if(selectedIds.size>1){
+      const selBoxes = boxes.filter(b=>selectedIds.has(b.id));
+      if(selBoxes.length){
+        positionGroupControls(Math.min(...selBoxes.map(b=>b.x)), Math.min(...selBoxes.map(b=>b.y)));
+      }
+    }
+  }
+
+  // floating ✎/⟳/−/+/✕ controls above a single selected box
   let controlsEl=null;
   function showControls(id){
     closeControls();
@@ -633,9 +912,10 @@
     controlsEl.className='box-controls';
     controlsEl.innerHTML = `
       <button data-act="edit" title="Редактировать">✎</button>
+      ${b.nums.length>1 ? '<button data-act="split" title="Разделить на отдельные ящики">✂</button>' : ''}
       <button data-act="rotate" title="Повернуть на 90°">⟳</button>
-      <button data-act="minus">−</button>
-      <button data-act="plus">+</button>
+      <button data-act="minus" title="Убрать последнее число">−</button>
+      <button data-act="plus" title="Добавить число">+</button>
       <button data-act="del" class="del">✕</button>
     `;
     floor.appendChild(controlsEl);
@@ -646,10 +926,11 @@
       if(!act) return;
       const box = boxes.find(x=>x.id===id);
       if(!box) return;
-      if(act==='plus'){ box.num++; }
-      else if(act==='minus'){ box.num--; }
+      if(act==='plus'){ box.nums.push(numCounter++); }
+      else if(act==='minus'){ if(box.nums.length>1) box.nums.pop(); }
       else if(act==='rotate'){ box.rot = ((box.rot||0)+90)%360; render(); select(id); pushHistory(); return; }
       else if(act==='edit'){ openEditModal(box); return; }
+      else if(act==='split'){ splitBox(box); return; }
       else if(act==='del'){ boxes = boxes.filter(x=>x.id!==id); deselect(); render(); pushHistory(); return; }
       render();
       select(id);
@@ -665,19 +946,145 @@
     if(controlsEl){ controlsEl.remove(); controlsEl=null; }
   }
 
+  // floating group controls above a multi-box selection (merge/rotate/delete)
+  let groupControlsEl=null;
+  function showGroupControls(){
+    closeGroupControls();
+    const selBoxes = boxes.filter(b=>selectedIds.has(b.id));
+    if(selBoxes.length<2) return;
+    const minX = Math.min(...selBoxes.map(b=>b.x));
+    const minY = Math.min(...selBoxes.map(b=>b.y));
+    groupControlsEl = document.createElement('div');
+    groupControlsEl.className='box-controls group-controls';
+    groupControlsEl.innerHTML = `
+      <span class="group-count">${selBoxes.length} ящ.</span>
+      <button data-act="merge" title="Объединить в один ящик">🔗 Объединить</button>
+      <button data-act="rotate" title="Повернуть на 90°">⟳</button>
+      <button data-act="del" class="del" title="Удалить выбранные">✕</button>
+    `;
+    floor.appendChild(groupControlsEl);
+    positionGroupControls(minX, minY);
+    groupControlsEl.addEventListener('pointerdown', e=>e.stopPropagation());
+    groupControlsEl.addEventListener('click', (e)=>{
+      const act = e.target.closest('button') && e.target.closest('button').dataset.act;
+      if(!act) return;
+      if(act==='merge'){ mergeSelected(); }
+      else if(act==='rotate'){
+        selectedIds.forEach(id=>{ const b=boxes.find(x=>x.id===id); if(b) b.rot=((b.rot||0)+90)%360; });
+        render(); pushHistory();
+      }
+      else if(act==='del'){
+        boxes = boxes.filter(b=>!selectedIds.has(b.id));
+        clearSelection(); render(); pushHistory();
+      }
+    });
+  }
+  function positionGroupControls(x,y){
+    if(!groupControlsEl) return;
+    groupControlsEl.style.left = x+'px';
+    groupControlsEl.style.top = (y-34)+'px';
+  }
+  function closeGroupControls(){
+    if(groupControlsEl){ groupControlsEl.remove(); groupControlsEl=null; }
+  }
+
+  function mergeSelected(){
+    const selBoxes = boxes.filter(b=>selectedIds.has(b.id));
+    if(selBoxes.length<2) return;
+    const mergedNums = [];
+    selBoxes.forEach(b=> b.nums.forEach(n=>{ if(!mergedNums.includes(n)) mergedNums.push(n); }));
+    const names = [...new Set(selBoxes.map(b=>b.name).filter(Boolean))];
+    const mergedName = names.join(' + ').slice(0,40);
+    const avgX = Math.round(selBoxes.reduce((s,b)=>s+b.x,0)/selBoxes.length);
+    const avgY = Math.round(selBoxes.reduce((s,b)=>s+b.y,0)/selBoxes.length);
+    const merged = {
+      id: idCounter++,
+      x: Math.max(0, Math.min(FLOOR_W-80, avgX)),
+      y: Math.max(0, Math.min(FLOOR_H-56, avgY)),
+      nums: mergedNums.length ? mergedNums : [0],
+      name: mergedName,
+      rot: selBoxes[0].rot||0
+    };
+    boxes = boxes.filter(b=>!selectedIds.has(b.id)).concat([merged]);
+    selectedIds = new Set([merged.id]);
+    render();
+    pushHistory();
+    showToast('Объединено в один ящик ('+merged.nums.length+' чисел)');
+  }
+
+  function splitBox(box){
+    if(!box.nums || box.nums.length<2) return;
+    const parts = box.nums.slice();
+    const newBoxes = parts.map((n,i)=>({
+      id: idCounter++,
+      x: Math.max(0, Math.min(FLOOR_W-70, box.x + (i%3)*54 - 54)),
+      y: Math.max(0, Math.min(FLOOR_H-56, box.y + Math.floor(i/3)*54)),
+      nums: [n],
+      name: box.name,
+      rot: box.rot||0
+    }));
+    boxes = boxes.filter(b=>b.id!==box.id).concat(newBoxes);
+    selectedIds = new Set(newBoxes.map(b=>b.id));
+    render();
+    pushHistory();
+    showToast('Разделено на '+newBoxes.length+' ящика(ов)');
+  }
+
   // ---------- edit modal ----------
   const editOverlay = document.getElementById('edit-overlay');
-  const editNumInput = document.getElementById('edit-num');
+  const editNumsList = document.getElementById('edit-nums-list');
+  const editAddNumBtn = document.getElementById('edit-add-num');
   const editNameInput = document.getElementById('edit-name');
   let editingId = null;
+  let editingNums = [];
+
+  function renderEditNumsList(focusLast){
+    editNumsList.innerHTML='';
+    editingNums.forEach((n, idx)=>{
+      const row = document.createElement('div');
+      row.className='num-row';
+      const input = document.createElement('input');
+      input.type='number';
+      input.value = n;
+      input.dataset.idx = idx;
+      const del = document.createElement('button');
+      del.type='button';
+      del.textContent='✕';
+      del.disabled = editingNums.length<=1;
+      del.addEventListener('click', ()=>{
+        syncEditNumsFromInputs();
+        editingNums.splice(idx,1);
+        if(editingNums.length===0) editingNums=[0];
+        renderEditNumsList();
+      });
+      row.appendChild(input);
+      row.appendChild(del);
+      editNumsList.appendChild(row);
+    });
+    if(focusLast){
+      const inputs = editNumsList.querySelectorAll('input');
+      const last = inputs[inputs.length-1];
+      if(last){ last.focus(); last.select(); }
+    }
+  }
+  function syncEditNumsFromInputs(){
+    const inputs = [...editNumsList.querySelectorAll('input')];
+    editingNums = inputs.map(i=>{ const v=parseInt(i.value,10); return isNaN(v)?0:v; });
+  }
+  editAddNumBtn.addEventListener('click', ()=>{
+    syncEditNumsFromInputs();
+    editingNums.push(numCounter++);
+    renderEditNumsList(true);
+  });
 
   function openEditModal(box){
     editingId = box.id;
-    editNumInput.value = box.num;
+    editingNums = box.nums.slice();
+    renderEditNumsList();
     editNameInput.value = box.name || '';
     editOverlay.classList.add('open');
-    editNumInput.focus();
-    editNumInput.select();
+    const firstInput = editNumsList.querySelector('input');
+    if(firstInput){ firstInput.focus(); firstInput.select(); }
   }
   function closeEditModal(){
     editOverlay.classList.remove('open');
@@ -686,9 +1093,8 @@
   function saveEditModal(){
     const box = boxes.find(x=>x.id===editingId);
     if(!box){ closeEditModal(); return; }
-    let v = parseInt(editNumInput.value, 10);
-    if(isNaN(v)) v = box.num;
-    box.num = v;
+    syncEditNumsFromInputs();
+    box.nums = editingNums.length ? editingNums.slice() : [0];
     box.name = editNameInput.value.trim().slice(0,40);
     closeEditModal();
     render();
@@ -738,8 +1144,52 @@
     });
   }
 
+  // ---------- rubber-band multi-select ----------
+  let rubberBand = null;
   floor.addEventListener('pointerdown', (e)=>{
-    if(e.target===floor) deselect();
+    if(e.target!==floor) return; // only start on empty floor, not on a box/controls
+    const rect = floor.getBoundingClientRect();
+    const sx = (e.clientX-rect.left)/zoomLevel, sy = (e.clientY-rect.top)/zoomLevel;
+    rubberBand = { sx, sy, additive: (e.shiftKey||e.ctrlKey||e.metaKey), rect:{x:sx,y:sy,w:0,h:0} };
+    const bandEl = document.createElement('div');
+    bandEl.id = 'rubber-band';
+    bandEl.style.cssText = 'position:absolute;border:1.5px dashed #F2B705;background:rgba(242,183,5,0.12);pointer-events:none;z-index:45;left:'+sx+'px;top:'+sy+'px;width:0;height:0;';
+    floor.appendChild(bandEl);
+    rubberBand.el = bandEl;
+    floor.setPointerCapture(e.pointerId);
+  });
+  floor.addEventListener('pointermove', (e)=>{
+    if(!rubberBand) return;
+    const rect = floor.getBoundingClientRect();
+    const cx = (e.clientX-rect.left)/zoomLevel, cy = (e.clientY-rect.top)/zoomLevel;
+    const x = Math.min(rubberBand.sx, cx), y = Math.min(rubberBand.sy, cy);
+    const w = Math.abs(cx-rubberBand.sx), h = Math.abs(cy-rubberBand.sy);
+    rubberBand.el.style.left=x+'px'; rubberBand.el.style.top=y+'px';
+    rubberBand.el.style.width=w+'px'; rubberBand.el.style.height=h+'px';
+    rubberBand.rect = {x,y,w,h};
+  });
+  floor.addEventListener('pointerup', (e)=>{
+    if(!rubberBand) return;
+    const r = rubberBand.rect;
+    const additive = rubberBand.additive;
+    rubberBand.el.remove();
+    rubberBand = null;
+    if(r.w>3 || r.h>3){
+      const hitIds = boxes.filter(b=>{
+        const el = floor.querySelector('.box[data-id="'+b.id+'"]');
+        if(!el) return false;
+        const bw=el.offsetWidth, bh=el.offsetHeight;
+        return b.x < r.x+r.w && b.x+bw > r.x && b.y < r.y+r.h && b.y+bh > r.y;
+      }).map(b=>b.id);
+      if(hitIds.length){
+        if(additive){ hitIds.forEach(id=>selectedIds.add(id)); refreshSelectionUI(); }
+        else { selectedIds = new Set(hitIds); refreshSelectionUI(); }
+      } else if(!additive){
+        clearSelection();
+      }
+    } else if(!additive){
+      clearSelection();
+    }
   });
 
   // ---------- toolbar actions ----------
@@ -750,7 +1200,7 @@
         id: idCounter++,
         x: 60 + ((i%5)*90) + (Math.random()*20|0),
         y: 60 + (Math.floor(i/5)*70) + (Math.random()*20|0),
-        num: numCounter++,
+        nums: [numCounter++],
         name: '',
         rot: 0
       };
@@ -802,10 +1252,13 @@
     if(typing) return;
     if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='z' && !e.shiftKey){ e.preventDefault(); undo(); }
     else if((e.ctrlKey||e.metaKey) && (e.key.toLowerCase()==='y' || (e.key.toLowerCase()==='z'&&e.shiftKey))){ e.preventDefault(); redo(); }
-    else if((e.key==='Delete'||e.key==='Backspace') && selectedId!=null){
+    else if((e.key==='Delete'||e.key==='Backspace') && selectedIds.size>0){
       e.preventDefault();
-      boxes = boxes.filter(b=>b.id!==selectedId);
-      deselect(); render(); pushHistory();
+      boxes = boxes.filter(b=>!selectedIds.has(b.id));
+      clearSelection(); render(); pushHistory();
+    }
+    else if(e.key==='Escape' && selectedIds.size>0){
+      clearSelection();
     }
   });
 
@@ -884,13 +1337,15 @@
 
   // ---------- templates (persistent, shared across users/devices) ----------
   const drawer = document.getElementById('drawer');
+  const templatesOverlay = document.getElementById('templates-overlay');
   document.getElementById('btn-templates').addEventListener('click', ()=>{
-    drawer.classList.add('open');
+    templatesOverlay.classList.add('open');
     loadTemplateList();
   });
-  document.getElementById('drawer-close').addEventListener('click', ()=>{
-    drawer.classList.remove('open');
-  });
+  function closeTemplatesPopup(){ templatesOverlay.classList.remove('open'); }
+  document.getElementById('drawer-close').addEventListener('click', closeTemplatesPopup);
+  templatesOverlay.addEventListener('pointerdown', (e)=>{ if(e.target===templatesOverlay) closeTemplatesPopup(); });
+  templatesOverlay.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ e.preventDefault(); closeTemplatesPopup(); } });
 
   async function getTemplates(){
     try{
@@ -942,13 +1397,13 @@
   }
 
   function applyTemplate(tpl){
-    boxes = tpl.boxes.map(b=>({...b}));
+    boxes = normalizeBoxes(tpl.boxes);
     idCounter = Math.max(0, ...boxes.map(b=>b.id)) + 1;
-    numCounter = Math.max(0, ...boxes.map(b=>b.num)) + 1;
+    numCounter = Math.max(0, ...boxes.flatMap(b=>b.nums)) + 1;
     deselect();
     render();
     pushHistory();
-    drawer.classList.remove('open');
+    closeTemplatesPopup();
     showToast('Шаблон «'+tpl.name+'» загружен');
   }
 
