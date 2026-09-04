@@ -25,6 +25,14 @@
   appId: "1:963080048208:web:c64b6ef3ec375b36aacb55",
   measurementId: "G-VHCF2HDVSR"
 };
+
+  // Пароль, который спрашивается перед загрузкой нового фона склада —
+  // меняет ОБЩИЙ для всех фон, поэтому защищён паролем от случайных
+  // изменений. Смените значение ниже на своё перед публикацией сайта.
+  // Это простая защита на стороне браузера (не настоящая авторизация) —
+  // подходит, чтобы отсечь случайные нажатия, но не скрывает пароль от
+  // тех, кто откроет исходный код страницы.
+  window.__BG_UPLOAD_PASSWORD__ = "sklad2026";
 </script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
@@ -84,6 +92,19 @@
   .spacer{flex:1;}
   .kbd{font-family:var(--mono);font-size:10px;color:var(--ink-soft);}
 
+  #wh-tabs{
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+    padding:8px 14px;background:var(--floor-line-major);border-bottom:1px solid var(--border);
+  }
+  .wh-tabs-label{font-family:var(--mono);font-size:11px;color:#B8BEC6;text-transform:uppercase;letter-spacing:0.08em;}
+  .wh-tab{
+    font-family:var(--sans);font-size:13px;font-weight:600;color:#D9DEE4;
+    background:transparent;border:1px solid rgba(255,255,255,0.25);border-radius:4px;
+    padding:6px 12px;cursor:pointer;transition:background .12s, color .12s;
+  }
+  .wh-tab:hover{background:rgba(255,255,255,0.1);}
+  .wh-tab.active{background:var(--yellow);color:#1c1e21;border-color:#c99a00;}
+
   #toolbar2{
     display:flex;align-items:center;gap:10px;flex-wrap:wrap;
     padding:8px 14px;background:var(--panel-2);border-bottom:1px solid var(--border);
@@ -100,6 +121,7 @@
   .range-size-label{font-size:12px;color:var(--ink-soft);display:flex;align-items:center;gap:5px;white-space:nowrap;}
   .range-size-label input{width:56px;font-family:var(--mono);font-size:12px;padding:5px 6px;border:1px solid var(--border);border-radius:4px;background:#fff;color:var(--ink);}
   #btn-range-toggle.active{background:var(--yellow);color:#1c1e21;border-color:#c99a00;}
+  button.tool.active{background:var(--yellow);color:#1c1e21;border-color:#c99a00;}
 
   #range-legend{
     position:absolute;left:14px;bottom:22px;background:rgba(245,243,236,0.96);
@@ -134,7 +156,7 @@
   #add-menu button + button{border-top:1px solid var(--border);}
 
   /* ---------- Floor ---------- */
-  #floor-wrap{flex:1;position:relative;overflow:auto;background:var(--floor);}
+  #floor-wrap{flex:1;position:relative;overflow:auto;background:var(--floor);touch-action:pan-x pan-y;}
   #floor-scale{position:relative;}
   #floor{
     position:relative;width:1600px;height:1000px;background:var(--floor);
@@ -191,6 +213,13 @@
   }
   .box.dragging{cursor:grabbing;box-shadow:0 6px 16px rgba(0,0,0,0.5);z-index:50;}
   .box.selected{outline:2px solid var(--yellow);outline-offset:2px;}
+  .select-badge{
+    position:absolute;top:-8px;right:-8px;width:20px;height:20px;border-radius:50%;
+    background:var(--yellow);color:#1c1e21;border:2px solid var(--panel);
+    display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;
+    pointer-events:none;z-index:5;
+  }
+  #floor.select-mode .box{cursor:pointer;}
   .box.search-dim{opacity:.2;}
   .box.search-match{outline:3px solid var(--yellow);outline-offset:2px;box-shadow:0 0 14px rgba(242,183,5,0.75);z-index:40;}
   .box .num{
@@ -324,6 +353,23 @@
     opacity:0;pointer-events:none;transition:opacity .2s, transform .2s;z-index:200;
   }
   #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  #select-mode-bar{
+    position:fixed;bottom:18px;left:50%;transform:translateX(-50%);
+    display:none;align-items:center;gap:10px;
+    background:var(--panel);border:2px solid var(--ink);border-radius:24px;
+    padding:8px 8px 8px 16px;box-shadow:0 6px 18px rgba(0,0,0,0.35);z-index:210;
+  }
+  #select-mode-bar.open{display:flex;}
+  #select-mode-count{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--ink);white-space:nowrap;}
+  #select-mode-bar button{
+    font-family:var(--sans);font-size:12px;font-weight:600;border-radius:18px;padding:8px 14px;
+    cursor:pointer;white-space:nowrap;
+  }
+  #select-mode-clear{background:var(--panel-2);border:1px solid var(--border);color:var(--ink);}
+  #select-mode-clear:hover{background:#E4DFCF;}
+  #select-mode-done{background:var(--blue);border:1px solid var(--blue-dark);color:#fff;}
+  #select-mode-done:hover{background:var(--blue-dark);}
 </style>
 </head>
 <body>
@@ -354,8 +400,17 @@
       <button class="tool" id="btn-zoom-reset" title="Сбросить масштаб">100%</button>
       <button class="tool" id="btn-zoom-in" title="Увеличить масштаб">+</button>
     </div>
+    <div class="sep"></div>
+    <button class="tool" id="btn-select-mode" title="Выбрать несколько ящиков подряд">☑ Выбор</button>
     <div class="spacer"></div>
     <button class="tool" id="btn-templates">▤ Шаблоны</button>
+  </div>
+
+  <div id="wh-tabs">
+    <span class="wh-tabs-label">Тип склада:</span>
+    <button class="wh-tab" data-type="hanging">Север (hanging)</button>
+    <button class="wh-tab" data-type="rotachni">Ротачни</button>
+    <button class="wh-tab" data-type="folding">Folding</button>
   </div>
 
   <div id="toolbar2">
@@ -402,6 +457,11 @@
   </div>
 </div>
 <div id="toast"></div>
+<div id="select-mode-bar">
+  <span id="select-mode-count">0 выбрано</span>
+  <button id="select-mode-clear">Очистить</button>
+  <button id="select-mode-done">Готово</button>
+</div>
 
 <div id="edit-overlay">
   <div id="edit-modal">
@@ -463,6 +523,41 @@
     setZoom(zoomLevel + (e.deltaY<0 ? ZOOM_STEP : -ZOOM_STEP));
   }, {passive:false});
   applyZoom();
+
+  // ---------- pinch-to-zoom (touch) ----------
+  // A single finger keeps panning natively (touch-action:pan-x pan-y on
+  // #floor-wrap). As soon as a second finger touches down we measure the
+  // distance between them and scale zoomLevel from that ratio on every
+  // move — the standard two-finger pinch gesture, independent of the
+  // per-box drag/select handling.
+  const activeTouchPoints = new Map();
+  let pinchStartDist = null, pinchStartZoom = 1;
+  floorWrap.addEventListener('pointerdown', (e)=>{
+    if(e.pointerType!=='touch') return;
+    activeTouchPoints.set(e.pointerId, {x:e.clientX, y:e.clientY});
+    if(activeTouchPoints.size===2){
+      const pts=[...activeTouchPoints.values()];
+      pinchStartDist = Math.hypot(pts[0].x-pts[1].x, pts[0].y-pts[1].y);
+      pinchStartZoom = zoomLevel;
+    }
+  });
+  floorWrap.addEventListener('pointermove', (e)=>{
+    if(e.pointerType!=='touch' || !activeTouchPoints.has(e.pointerId)) return;
+    activeTouchPoints.set(e.pointerId, {x:e.clientX, y:e.clientY});
+    if(activeTouchPoints.size===2 && pinchStartDist){
+      const pts=[...activeTouchPoints.values()];
+      const dist = Math.hypot(pts[0].x-pts[1].x, pts[0].y-pts[1].y);
+      e.preventDefault();
+      setZoom(pinchStartZoom * (dist/pinchStartDist));
+    }
+  }, {passive:false});
+  function endTouchPoint(e){
+    if(e.pointerType!=='touch') return;
+    activeTouchPoints.delete(e.pointerId);
+    if(activeTouchPoints.size<2) pinchStartDist=null;
+  }
+  floorWrap.addEventListener('pointerup', endTouchPoint);
+  floorWrap.addEventListener('pointercancel', endTouchPoint);
 
   // ---------- storage backend ----------
   // Inside Claude, window.storage is provided by the artifact runtime.
@@ -532,17 +627,31 @@
   }
 
   // ---------- state ----------
-  let boxes = [];        // {id, x, y, num}
+  const WAREHOUSE_TYPES = ['hanging','rotachni','folding'];
+  const WAREHOUSE_LABELS = { hanging:'Север (hanging)', rotachni:'Ротачни', folding:'Folding' };
+  let currentType = 'hanging';
+  // Each warehouse type keeps its own boxes, background and undo history.
+  // `boxes`/`currentBgDataUrl`/`history`/`historyIndex` below always mirror
+  // the CURRENTLY ACTIVE type; switchWarehouseType() saves them back into
+  // `warehouses[currentType]` before swapping to the new type's data.
+  let warehouses = {
+    hanging:  { boxes: [], background: null, history: [[]], historyIndex: 0 },
+    rotachni: { boxes: [], background: null, history: [[]], historyIndex: 0 },
+    folding:  { boxes: [], background: null, history: [[]], historyIndex: 0 }
+  };
+  let boxes = warehouses.hanging.boxes;
   let selectedIds = new Set();
+  let multiSelectMode = false;
   let idCounter = 1;
   let numCounter = 1;
-  let history = [];
-  let historyIndex = -1;
+  let history = warehouses.hanging.history;
+  let historyIndex = warehouses.hanging.historyIndex;
   let suppressSnapshot = false;
   let currentBgDataUrl = null;
   let lastKnownUpdatedAt = 0;
 
   function cloneBoxes(){ return boxes.map(b => ({...b, nums:(b.nums||[]).slice()})); }
+  function cloneBoxList(list){ return (list||[]).map(b => ({...b, nums:(b.nums||[]).slice()})); }
 
   function normalizeBox(b){
     if(!Array.isArray(b.nums) || b.nums.length===0){
@@ -555,6 +664,68 @@
     return b;
   }
   function normalizeBoxes(list){ return (list||[]).map(b=>normalizeBox({...b})); }
+
+  // Captures ALL THREE warehouse types together — this is what gets saved
+  // into a single shared-state payload or a single template, per the
+  // requirement that one template holds every warehouse type at once.
+  function snapshotAllWarehouses(){
+    const snap = {};
+    WAREHOUSE_TYPES.forEach(t=>{
+      if(t===currentType){
+        snap[t] = { boxes: cloneBoxes(), background: currentBgDataUrl };
+      } else {
+        const src = warehouses[t] || {boxes:[],background:null};
+        snap[t] = { boxes: cloneBoxList(src.boxes), background: src.background||null };
+      }
+    });
+    return snap;
+  }
+  // Accepts either the new {warehouses:{...}} shape or the old
+  // single-warehouse shape (from before this feature existed) and always
+  // returns a full, normalized 3-type structure.
+  function normalizeWarehouses(data){
+    const out = {};
+    if(data && data.warehouses){
+      WAREHOUSE_TYPES.forEach(t=>{
+        const src = data.warehouses[t] || {};
+        out[t] = { boxes: normalizeBoxes(src.boxes||[]), background: src.background||null };
+      });
+    } else {
+      WAREHOUSE_TYPES.forEach(t=>{ out[t] = { boxes:[], background:null }; });
+      out.hanging = { boxes: normalizeBoxes((data && data.boxes)||[]), background: (data && data.background)||null };
+    }
+    return out;
+  }
+
+  function switchWarehouseType(newType){
+    if(newType===currentType || !WAREHOUSE_TYPES.includes(newType)) return;
+    warehouses[currentType].boxes = boxes;
+    warehouses[currentType].background = currentBgDataUrl;
+    warehouses[currentType].history = history;
+    warehouses[currentType].historyIndex = historyIndex;
+
+    currentType = newType;
+    const w = warehouses[currentType];
+    boxes = w.boxes;
+    currentBgDataUrl = w.background;
+    history = w.history;
+    historyIndex = w.historyIndex;
+
+    clearSelection();
+    if(currentBgDataUrl){ applyBackground(currentBgDataUrl); }
+    else { floor.classList.remove('custom-bg'); floor.style.backgroundImage=''; bgClearBtn.style.display='none'; }
+    render();
+    updateHistoryButtons();
+    updateWarehouseTabsUI();
+  }
+  function updateWarehouseTabsUI(){
+    document.querySelectorAll('.wh-tab').forEach(el=>{
+      el.classList.toggle('active', el.dataset.type===currentType);
+    });
+  }
+  document.querySelectorAll('.wh-tab').forEach(el=>{
+    el.addEventListener('click', ()=> switchWarehouseType(el.dataset.type));
+  });
 
   function pushHistory(){
     if(suppressSnapshot) return;
@@ -595,9 +766,8 @@
   async function syncSharedState(attempt){
     attempt = attempt || 1;
     const payload = {
-      boxes: cloneBoxes(),
+      warehouses: snapshotAllWarehouses(),
       idCounter, numCounter,
-      background: currentBgDataUrl,
       updatedAt: Date.now()
     };
     try{
@@ -618,24 +788,29 @@
       || !!document.querySelector('[contenteditable="true"]')
       || editOverlay.classList.contains('open')
       || document.getElementById('add-menu').classList.contains('open')
-      || document.getElementById('drawer').classList.contains('open');
+      || document.getElementById('templates-overlay').classList.contains('open');
   }
 
   function applyRemoteState(remote, announce){
-    boxes = normalizeBoxes(remote.boxes||[]);
+    warehouses = normalizeWarehouses(remote);
     idCounter = remote.idCounter || idCounter;
-    numCounter = Math.max(remote.numCounter||0, ...boxes.flatMap(b=>b.nums), 0) + 1;
-    currentBgDataUrl = remote.background || null;
+    const allNums = WAREHOUSE_TYPES.flatMap(t=>warehouses[t].boxes.flatMap(b=>b.nums));
+    numCounter = Math.max(remote.numCounter||0, ...allNums, 0) + 1;
+    WAREHOUSE_TYPES.forEach(t=>{
+      warehouses[t].history = [ cloneBoxList(warehouses[t].boxes) ];
+      warehouses[t].historyIndex = 0;
+    });
+    boxes = warehouses[currentType].boxes;
+    currentBgDataUrl = warehouses[currentType].background;
+    history = warehouses[currentType].history;
+    historyIndex = warehouses[currentType].historyIndex;
     if(currentBgDataUrl){ applyBackground(currentBgDataUrl); }
     else { floor.classList.remove('custom-bg'); floor.style.backgroundImage=''; bgClearBtn.style.display='none'; }
     lastKnownUpdatedAt = remote.updatedAt || Date.now();
     deselect();
     render();
-    suppressSnapshot = true;
-    history = [cloneBoxes()];
-    historyIndex = 0;
-    suppressSnapshot = false;
     updateHistoryButtons();
+    updateWarehouseTabsUI();
     if(announce) showToast('Карта обновлена другим пользователем');
   }
 
@@ -766,6 +941,12 @@
       name.textContent = b.name ? b.name : 'название';
       el.appendChild(num);
       el.appendChild(name);
+      if(selectedIds.has(b.id)){
+        const badge = document.createElement('div');
+        badge.className='select-badge';
+        badge.textContent='✓';
+        el.appendChild(badge);
+      }
       floor.appendChild(el);
       attachBoxEvents(el, b, num, name);
     });
@@ -775,6 +956,7 @@
     } else if(selectedIds.size>1){
       showGroupControls();
     }
+    updateSelectModeUI();
     applySearchHighlight();
     updateRangeLegend();
   }
@@ -785,9 +967,9 @@
     el.addEventListener('pointerdown', (e)=>{
       if(e.target.isContentEditable) return;
       const modifier = e.shiftKey || e.ctrlKey || e.metaKey;
-      if(modifier){
+      if(modifier || multiSelectMode){
         toggleSelect(b.id);
-        return; // toggling selection only, no drag on this click
+        return; // toggling selection only, no drag on this click/tap
       }
       if(!selectedIds.has(b.id)){
         selectOnly(b.id);
@@ -877,9 +1059,44 @@
   }
   function deselect(){ clearSelection(); } // alias kept for existing call sites
 
+  // ---------- select mode (mobile-friendly multi-select) ----------
+  // On touch devices there's no Ctrl/Cmd+click, so this explicit mode is
+  // the equivalent: while it's on, every tap on a box toggles it in/out
+  // of the selection instead of starting a drag. Turn it off, then drag
+  // any of the selected boxes to move the whole group together — the
+  // same group actions (merge/rotate/delete) already work regardless of
+  // how the selection was built.
+  const selectModeBtn = document.getElementById('btn-select-mode');
+  const selectModeBar = document.getElementById('select-mode-bar');
+  const selectModeCount = document.getElementById('select-mode-count');
+
+  function setSelectMode(on){
+    multiSelectMode = on;
+    selectModeBtn.classList.toggle('active', on);
+    floor.classList.toggle('select-mode', on);
+    updateSelectModeUI();
+  }
+  function updateSelectModeUI(){
+    selectModeBar.classList.toggle('open', multiSelectMode);
+    selectModeCount.textContent = selectedIds.size + ' выбрано';
+  }
+  selectModeBtn.addEventListener('click', ()=> setSelectMode(!multiSelectMode));
+  document.getElementById('select-mode-done').addEventListener('click', ()=> setSelectMode(false));
+  document.getElementById('select-mode-clear').addEventListener('click', ()=> clearSelection());
+
   function refreshSelectionUI(){
     document.querySelectorAll('.box').forEach(el=>{
-      el.classList.toggle('selected', selectedIds.has(parseInt(el.dataset.id)));
+      const isSel = selectedIds.has(parseInt(el.dataset.id));
+      el.classList.toggle('selected', isSel);
+      let badge = el.querySelector('.select-badge');
+      if(isSel && !badge){
+        badge = document.createElement('div');
+        badge.className='select-badge';
+        badge.textContent='✓';
+        el.appendChild(badge);
+      } else if(!isSel && badge){
+        badge.remove();
+      }
     });
     closeControls();
     closeGroupControls();
@@ -888,6 +1105,7 @@
     } else if(selectedIds.size>1){
       showGroupControls();
     }
+    updateSelectModeUI();
   }
 
   function repositionActivePanels(){
@@ -1148,6 +1366,7 @@
   let rubberBand = null;
   floor.addEventListener('pointerdown', (e)=>{
     if(e.target!==floor) return; // only start on empty floor, not on a box/controls
+    if(e.pointerType==='touch') return; // touch drag on empty floor pans the map instead
     const rect = floor.getBoundingClientRect();
     const sx = (e.clientX-rect.left)/zoomLevel, sy = (e.clientY-rect.top)/zoomLevel;
     rubberBand = { sx, sy, additive: (e.shiftKey||e.ctrlKey||e.metaKey), rect:{x:sx,y:sy,w:0,h:0} };
@@ -1280,7 +1499,7 @@
         currentBgDataUrl = fitImageToStorage(img);
         applyBackground(currentBgDataUrl);
         await syncSharedState();
-        showToast('Фон загружен — виден всем пользователям карты');
+        showToast('Фон для склада «'+WAREHOUSE_LABELS[currentType]+'» загружен — виден всем');
       };
       img.onerror = ()=> showToast('Не удалось прочитать изображение');
       img.src = ev.target.result;
@@ -1290,7 +1509,7 @@
   });
 
   bgClearBtn.addEventListener('click', async ()=>{
-    const ok = await askConfirm('Убрать загруженный фон для всех пользователей и вернуться к схеме склада?');
+    const ok = await askConfirm('Убрать фон склада «'+WAREHOUSE_LABELS[currentType]+'» для всех пользователей?');
     if(!ok) return;
     currentBgDataUrl = null;
     floor.classList.remove('custom-bg');
@@ -1378,9 +1597,12 @@
       item.className='tpl-item';
       const date = new Date(tpl.savedAt);
       const dateStr = date.toLocaleDateString('ru-RU') + ' ' + date.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
+      const wh = normalizeWarehouses(tpl);
+      const counts = WAREHOUSE_TYPES.map(t=> WAREHOUSE_LABELS[t].split(' ')[0]+': '+wh[t].boxes.length).join(' · ');
       item.innerHTML = `
         <div class="tpl-name">${escapeHtml(tpl.name)}</div>
-        <div class="tpl-meta">${tpl.boxes.length} ящ. · ${dateStr}</div>
+        <div class="tpl-meta">${counts}</div>
+        <div class="tpl-meta">${dateStr}</div>
         <div class="tpl-actions">
           <button class="load">Загрузить</button>
           <button class="del">Удалить</button>
@@ -1397,14 +1619,27 @@
   }
 
   function applyTemplate(tpl){
-    boxes = normalizeBoxes(tpl.boxes);
-    idCounter = Math.max(0, ...boxes.map(b=>b.id)) + 1;
-    numCounter = Math.max(0, ...boxes.flatMap(b=>b.nums)) + 1;
+    warehouses = normalizeWarehouses(tpl);
+    const allBoxes = WAREHOUSE_TYPES.flatMap(t=>warehouses[t].boxes);
+    idCounter = Math.max(0, ...allBoxes.map(b=>b.id)) + 1;
+    numCounter = Math.max(0, ...allBoxes.flatMap(b=>b.nums)) + 1;
+    WAREHOUSE_TYPES.forEach(t=>{
+      warehouses[t].history = [ cloneBoxList(warehouses[t].boxes) ];
+      warehouses[t].historyIndex = 0;
+    });
+    boxes = warehouses[currentType].boxes;
+    currentBgDataUrl = warehouses[currentType].background;
+    history = warehouses[currentType].history;
+    historyIndex = warehouses[currentType].historyIndex;
     deselect();
+    if(currentBgDataUrl){ applyBackground(currentBgDataUrl); }
+    else { floor.classList.remove('custom-bg'); floor.style.backgroundImage=''; bgClearBtn.style.display='none'; }
     render();
-    pushHistory();
+    updateHistoryButtons();
+    updateWarehouseTabsUI();
+    syncSharedState();
     closeTemplatesPopup();
-    showToast('Шаблон «'+tpl.name+'» загружен');
+    showToast('Шаблон «'+tpl.name+'» загружен (все типы склада)');
   }
 
   async function deleteTemplate(name){
@@ -1421,10 +1656,12 @@
     const input = document.getElementById('save-name');
     const name = input.value.trim();
     if(!name){ input.focus(); return; }
-    if(boxes.length===0){ showToast('Нечего сохранять — карта пуста'); return; }
+    const snapshot = snapshotAllWarehouses();
+    const totalBoxes = WAREHOUSE_TYPES.reduce((s,t)=>s+snapshot[t].boxes.length,0);
+    if(totalBoxes===0){ showToast('Нечего сохранять — все склады пусты'); return; }
     const list = await getTemplates();
     const existingIdx = list.findIndex(t=>t.name===name);
-    const tpl = { name, savedAt: Date.now(), boxes: cloneBoxes() };
+    const tpl = { name, savedAt: Date.now(), warehouses: snapshot };
     if(existingIdx>=0){
       const ok = await askConfirm('Шаблон с таким именем уже есть. Перезаписать?');
       if(!ok) return;
@@ -1436,7 +1673,7 @@
     if(ok){
       input.value='';
       loadTemplateList();
-      showToast('Шаблон «'+name+'» сохранён');
+      showToast('Шаблон «'+name+'» сохранён (все типы склада)');
     } else {
       showToast('Не удалось сохранить шаблон');
     }
@@ -1454,6 +1691,7 @@
 
   // ---------- init ----------
   async function initApp(){
+    updateWarehouseTabsUI();
     try{
       const remote = await backend.getShared();
       if(remote){
